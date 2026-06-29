@@ -65,7 +65,7 @@
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
     <span class="spacer"></span>
-    <span class="chip on" id="audver" title="режим звука">DUB·1</span>
+    <span class="chip on" id="audver" title="режим звука">DUB·3</span>
     <span class="chip" id="regenAll">⟳ REGEN</span>
     <span class="chip on" id="sound">♪ ЗВУК</span>
   </div>
@@ -149,13 +149,28 @@ R.starwarp={make(d,s,w,h,P,va){const D=(va&&va.dens)||1,r=rng(s),N=[],n=Math.min
 // ---- MEMORY engines: warm faded symbols of good memories (fading from memory) ----
 function memDust(c,w,h,t,P){c.fillStyle=P.b+"1c";const S=Math.min(w,h);for(let i=0;i<34;i++){const a=i*1.7+t*.0003;c.fillRect(w/2+Math.cos(a)*S*(.18+(i%6)*.06),h*.5+Math.sin(a*1.3+i)*S*.32,1.4,1.4);}c.fillStyle="#0a08060c";c.fillRect(0,0,w,h);}
 function memSet(c,P,br){c.strokeStyle=P.a;c.lineWidth=2.2;c.shadowBlur=16;c.shadowColor=P.a;c.lineJoin="round";c.lineCap="round";c.globalAlpha=br;}
-R.memo_cat={make(){return{};},frame(c,w,h,t,s,P){const cx=w/2,cy=h*.54,S=Math.min(w,h),u=S*.15,br=.55+.28*Math.sin(t*.0009);c.save();c.translate(cx,cy);memSet(c,P,br);
- c.beginPath();c.moveTo(-u*.9,u*1.5);c.quadraticCurveTo(-u*1.15,-u*.1,-u*.5,-u*.6);c.lineTo(u*.5,-u*.6);c.quadraticCurveTo(u*1.15,-u*.1,u*.9,u*1.5);c.closePath();c.stroke();
- c.beginPath();c.arc(0,-u*1.05,u*.72,0,TAU);c.stroke();
- c.beginPath();c.moveTo(-u*.6,-u*1.6);c.lineTo(-u*.22,-u*1.1);c.moveTo(u*.6,-u*1.6);c.lineTo(u*.22,-u*1.1);c.stroke();
- c.beginPath();c.moveTo(u*.85,u*1.35);c.quadraticCurveTo(u*1.8,u*.5,u*1.2,-u*.25);c.stroke();
- c.shadowBlur=8;c.fillStyle=P.b;c.beginPath();c.arc(-u*.26,-u*1.05,u*.1,0,TAU);c.arc(u*.26,-u*1.05,u*.1,0,TAU);c.fill();
- c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
+R.memo_cat={make(){return{};},frame(c,w,h,t,s,P){const cx=w/2,cy=h*.5,S=Math.min(w,h),u=S*.135,br=.62+.2*Math.sin(t*.0011),bob=Math.sin(t*.0011)*u*.06;c.save();c.translate(cx,cy+bob);memSet(c,P,br);
+ // plump sitting body
+ c.beginPath();c.moveTo(-u*.95,u*1.7);c.quadraticCurveTo(-u*1.2,u*.2,-u*.55,-u*.45);c.quadraticCurveTo(0,-u*.72,u*.55,-u*.45);c.quadraticCurveTo(u*1.2,u*.2,u*.95,u*1.7);c.quadraticCurveTo(0,u*2.0,-u*.95,u*1.7);c.closePath();c.stroke();
+ // little front paws
+ c.beginPath();c.arc(-u*.4,u*1.55,u*.28,Math.PI,TAU);c.arc(u*.4,u*1.55,u*.28,Math.PI,TAU);c.stroke();
+ // head
+ c.beginPath();c.arc(0,-u*1.05,u*.8,0,TAU);c.stroke();
+ // ears — upright, friendly
+ c.beginPath();c.moveTo(-u*.66,-u*1.5);c.lineTo(-u*.5,-u*2.25);c.lineTo(-u*.06,-u*1.62);c.stroke();
+ c.beginPath();c.moveTo(u*.66,-u*1.5);c.lineTo(u*.5,-u*2.25);c.lineTo(u*.06,-u*1.62);c.stroke();
+ // soft curled tail
+ c.beginPath();c.moveTo(u*.92,u*1.5);c.quadraticCurveTo(u*1.95,u*.7,u*1.4,-u*.05);c.quadraticCurveTo(u*1.12,-u*.45,u*1.42,-u*.65);c.stroke();
+ // whiskers
+ c.save();c.lineWidth=1.2;c.globalAlpha=br*.6;[-1,1].forEach(sg=>{[-.02,.16,.34].forEach(oy=>{c.beginPath();c.moveTo(sg*u*.32,-u*.95+oy*u);c.lineTo(sg*u*1.3,-u*1.0+oy*u*1.5);c.stroke();});});c.restore();
+ // friendly round eyes + highlights
+ c.shadowBlur=8;c.shadowColor=P.a;c.fillStyle=P.a;c.beginPath();c.arc(-u*.3,-u*1.12,u*.16,0,TAU);c.arc(u*.3,-u*1.12,u*.16,0,TAU);c.fill();
+ c.shadowBlur=0;c.fillStyle="#fff8ec";c.beginPath();c.arc(-u*.24,-u*1.18,u*.055,0,TAU);c.arc(u*.36,-u*1.18,u*.055,0,TAU);c.fill();
+ // pink nose
+ c.fillStyle=P.b;c.beginPath();c.moveTo(0,-u*.74);c.lineTo(-u*.1,-u*.86);c.lineTo(u*.1,-u*.86);c.closePath();c.fill();
+ // happy cat mouth ‿‿
+ c.strokeStyle=P.a;c.lineWidth=2;c.beginPath();c.moveTo(0,-u*.74);c.lineTo(0,-u*.6);c.stroke();c.beginPath();c.arc(-u*.13,-u*.6,u*.13,0,Math.PI);c.stroke();c.beginPath();c.arc(u*.13,-u*.6,u*.13,0,Math.PI);c.stroke();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.25;}};
 R.memo_embrace={make(){return{};},frame(c,w,h,t,s,P){const cx=w/2,cy=h*.52,S=Math.min(w,h),u=S*.13,br=.55+.28*Math.sin(t*.0008),lean=Math.sin(t*.0006)*u*.1;c.save();c.translate(cx,cy);memSet(c,P,br);
  const fig=(ox,dir)=>{c.save();c.translate(ox,0);c.beginPath();c.arc(0,-u*1.1,u*.55,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*.55);c.lineTo(0,u*1.2);c.stroke();c.beginPath();c.moveTo(0,-u*.1);c.quadraticCurveTo(dir*u*1.3,-u*.3,dir*u*1.6,u*.2);c.stroke();c.restore();};
  fig(-u*.7-lean,1);fig(u*.7+lean,-1);
@@ -220,7 +235,7 @@ function wrap(s,n){const wds=s.split(" "),L=[];let cur="";for(const wd of wds){i
 
 //// ===================== AUDIO v7: melancholic dreamcore dub ===============
 let AC,master,revIn,delIn,bedSub=null,padFilt=null,bedOn=true,started=false,noiseBuf=null;
-let audioVer=1,bedV1Gain=null,bedV2Gain=null,bedV3Gain=null,toneFilter=null;  // 1=dreamcore 2=Paul St.Hilaire 3=Rhythm&Sound (sad, swelling)
+let audioVer=3,bedV1Gain=null,bedV2Gain=null,bedV3Gain=null,toneFilter=null;  // 3=Rhythm&Sound (default) 1=dreamcore 2=Paul St.Hilaire
 const GK=window.GKEY||{root:-7,scale:"aeolian"};const GROOT=GK.root,GSCALE=GK.scale;
 let curRoot=GROOT,curChord=[0,3,7,10],curScale=GSCALE,curBright=.3,curReg=0;
 const SCALES={aeolian:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],locrian:[0,1,3,5,6,8,10],minor:[0,2,3,5,7,8,10]};
