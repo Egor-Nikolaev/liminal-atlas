@@ -176,15 +176,16 @@ function nbuf(){if(noiseBuf)return noiseBuf;const len=AC.sampleRate*2,b=AC.creat
 function impulse(sec,dec){const len=AC.sampleRate*sec,b=AC.createBuffer(2,len,AC.sampleRate);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,dec);}return b;}
 function freq(root,st){return 110*Math.pow(2,(root+st)/12);}
 function audioStart(){if(started)return;started=true;AC=new(window.AudioContext||window.webkitAudioContext)();
- master=AC.createGain();master.gain.value=0.0;const comp=AC.createDynamicsCompressor();master.connect(comp);comp.connect(AC.destination);
+ master=AC.createGain();master.gain.value=0.0;const tape=AC.createWaveShaper();tape.curve=softClip(.22);tape.oversample="2x";const comp=AC.createDynamicsCompressor();master.connect(tape);tape.connect(comp);comp.connect(AC.destination);
  const rev=AC.createConvolver();rev.buffer=impulse(5,2.2);revIn=AC.createGain();revIn.gain.value=.9;const ro=AC.createGain();ro.gain.value=.85;revIn.connect(rev);rev.connect(ro);ro.connect(master);
  // dub delay — long, dark, filtered feedback
- const dl=AC.createDelay(1.4);dl.delayTime.value=.66;const fb=AC.createGain();fb.gain.value=.62;const df=AC.createBiquadFilter();df.type="lowpass";df.frequency.value=620;delIn=AC.createGain();delIn.gain.value=.6;delIn.connect(dl);dl.connect(df);df.connect(fb);fb.connect(dl);dl.connect(master);dl.connect(revIn);
+ const dl=AC.createDelay(1.4);dl.delayTime.value=beat*0.75;const fb=AC.createGain();fb.gain.value=.7;const df=AC.createBiquadFilter();df.type="lowpass";df.frequency.value=900;delIn=AC.createGain();delIn.gain.value=.6;delIn.connect(dl);dl.connect(df);df.connect(fb);fb.connect(dl);dl.connect(master);dl.connect(revIn);
+ const wow=AC.createOscillator();wow.frequency.value=.3;const wowAmt=AC.createGain();wowAmt.gain.value=.0009;wow.connect(wowAmt);wowAmt.connect(dl.delayTime);wow.start();
  // sustained sub drone — uniform, no rhythm
  bedSub=AC.createOscillator();bedSub.type="sine";const sg=AC.createGain();sg.gain.value=.17;bedSub.frequency.value=freq(curRoot,0)/2;bedSub.connect(sg);sg.connect(master);bedSub.start();
  // warm vinyl/tape dust (Jelinek bed) — lowpassed, not hissy
  {const src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=1600;const g=AC.createGain();g.gain.value=.018;src.connect(lp);lp.connect(g);g.connect(master);src.start();}
- microsound();bedChordLoop();
+ microsound();schNext=AC.currentTime+.1;scheduler();
  master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+1.4);
 }
 function audioResume(){if(AC&&AC.state==="suspended")AC.resume();}
@@ -196,24 +197,29 @@ function cut(){if(!AC)return;const SC=SCALES[curScale]||SCALES.aeolian,t=AC.curr
 // THE dub-techno chord stab (minor, filter-wah, drenched)
 // one FM electric-piano (Rhodes) voice — soft bloom, mellow
 function rhodes(f,t,dur,gain,out){const car=AC.createOscillator();car.type="sine";car.frequency.value=f;const mod=AC.createOscillator();mod.type="sine";mod.frequency.value=f;const mi=AC.createGain();mi.gain.setValueAtTime(f*3,t);mi.gain.exponentialRampToValueAtTime(f*.4,t+.5);mod.connect(mi);mi.connect(car.frequency);const vg=AC.createGain();vg.gain.value=0;car.connect(vg);vg.connect(out);vg.gain.setValueAtTime(.0001,t);vg.gain.linearRampToValueAtTime(gain,t+.09);vg.gain.exponentialRampToValueAtTime(.0001,t+dur);car.start(t);mod.start(t);car.stop(t+dur+.1);mod.stop(t+dur+.1);}
-// THE dub-techno chord — warm Rhodes stab, soft bloom, mostly WET (reverb + dub delay), gentle tremolo
-function dubChord(root,chord,o){if(!AC)return;o=o||{};const t=o.when||AC.currentTime,dur=o.dur||2.6,vel=o.vel==null?.5:o.vel,bright=o.bright==null?.5:o.bright;
- const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(root,0)*(3+bright*5);lp.Q.value=1.2;
- const dry=AC.createGain();dry.gain.value=.26;lp.connect(dry);dry.connect(master);
- if(revIn){const rs=AC.createGain();rs.gain.value=.95;lp.connect(rs);rs.connect(revIn);}
- if(delIn){const ds=AC.createGain();ds.gain.value=.85;lp.connect(ds);ds.connect(delIn);}
- const trem=AC.createGain();trem.gain.value=1;const lfo=AC.createOscillator();lfo.type="sine";lfo.frequency.value=.45+Math.random()*.5;const lg=AC.createGain();lg.gain.value=.16;lfo.connect(lg);lg.connect(trem.gain);lfo.start(t);lfo.stop(t+dur+.1);trem.connect(lp);
- chord.forEach(st=>[-5,5].forEach(det=>rhodes(freq(root,st+12)*Math.pow(2,det/1200),t,dur,vel*.55/chord.length,trem)));}
-// ambient bed: a hypnotic two-chord dub vamp (i -> iv) in the current key, drenched
-let bedAlt=0;
-function bedChordLoop(){if(!AC)return;if(bedOn){dubChord(curRoot+(bedAlt?5:0),curChord,{vel:.5,bright:.26,dur:3.6+Math.random()*1.6});bedAlt^=1;}setTimeout(bedChordLoop,3600+Math.random()*2400);}
+// --- Basic Channel / Rhythm & Sound dub core ---
+function softClip(amt){const n=2048,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=Math.tanh(x*(1+amt*4));}return c;}
+// analog detuned-saw chord voice (R&S core): saws ±12c -> LP -> soft-clip; 12ms attack, short body
+function dabVoice(f,t,dur,gain,out,cut){const o1=AC.createOscillator(),o2=AC.createOscillator(),o3=AC.createOscillator();o1.type=o2.type=o3.type="sawtooth";[o1,o2,o3].forEach(o=>o.frequency.value=f);o2.detune.value=12;o3.detune.value=-12;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=cut||820;lp.Q.value=1.4;const sh=AC.createWaveShaper();sh.curve=softClip(.3);sh.oversample="2x";const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+.012);g.gain.exponentialRampToValueAtTime(gain*.5,t+.22);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o1.connect(lp);o2.connect(lp);o3.connect(lp);lp.connect(sh);sh.connect(g);g.connect(out);[o1,o2,o3].forEach(o=>{o.start(t);o.stop(t+dur+.05);});}
+// THE dub chord — detuned analog stab: ~40% dry body + 60% wet tail
+function dubChord(root,chord,o){if(!AC)return;o=o||{};const t=o.when||AC.currentTime,dur=o.dur||2.4,vel=o.vel==null?.5:o.vel,bright=o.bright==null?.4:o.bright;
+ const out=AC.createGain();out.gain.value=1;
+ const dry=AC.createGain();dry.gain.value=.4;out.connect(dry);dry.connect(master);
+ if(revIn){const rs=AC.createGain();rs.gain.value=.55;out.connect(rs);rs.connect(revIn);}
+ if(delIn){const ds=AC.createGain();ds.gain.value=.6;out.connect(ds);ds.connect(delIn);}
+ chord.forEach(st=>dabVoice(freq(root,st+12),t,dur,vel*.5/chord.length,out,600+bright*350));}
+// --- pulse: lookahead scheduler, offbeat skank + sidechain breathing ---
+const BPM=120,beat=60/BPM;let schStep=0,schNext=0,schBar=0;
+function harmonyOffset(bar){const ph=bar%16;return ph<8?0:(ph<12?-2:0);} // hold tonic, dip -2 semitones, back
+function duckTick(t){if(!delIn)return;const d=delIn.gain;d.cancelScheduledValues(t);d.setValueAtTime(.32,t);d.linearRampToValueAtTime(.72,t+beat*.6);}
+function scheduler(){if(!AC)return;while(schNext<AC.currentTime+.12){if(bedOn){if(schStep%2===0)duckTick(schNext);if(schStep%2===1)dubChord(curRoot+harmonyOffset(schBar),curChord,{dur:2.4,vel:.5,bright:.35,when:schNext});}schNext+=beat/2;schStep++;if(schStep%8===0)schBar++;}setTimeout(scheduler,25);}
 // melancholic Floex/Dvorak motif
 function dvorak(snd){if(!AC)return;const SC=SCALES[snd.scale]||SCALES.aeolian,t0=AC.currentTime,n=2+(Math.random()*2|0);for(let i=0;i<n;i++){const dg=SC[(Math.random()*SC.length)|0],f=freq(snd.root,dg+12),tt=t0+i*.3,o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const o2=AC.createOscillator();o2.type="sine";o2.frequency.value=f*3;const og=AC.createGain();og.gain.value=.05;const g=AC.createGain();g.gain.value=0;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=f*2;bp.Q.value=4;o2.connect(og);og.connect(g);o.connect(g);g.connect(bp);bp.connect(master);if(revIn)bp.connect(revIn);if(delIn)bp.connect(delIn);g.gain.setValueAtTime(.0001,tt);g.gain.exponentialRampToValueAtTime(.13,tt+.06);g.gain.exponentialRampToValueAtTime(.0001,tt+.75);o.start(tt);o2.start(tt);o.stop(tt+.85);o2.stop(tt+.85);}}
 // glide bed key to a card (music changes per card)
 function setChord(chord,root,scale){if(!AC)return;curChord=chord;curRoot=root;if(scale)curScale=scale;if(bedSub)bedSub.frequency.setTargetAtTime(freq(root,0)/2,AC.currentTime,.4);}
 // interaction = sustained dub chord; drag = filter wah; hold keeps it
 function makeVoice(snd){return{active:false,snd,osc:null,g:null,filt:null,base:0};}
-function voiceOn(v,fx,fy){audioStart();audioResume();if(v.active)voiceOff(v);setChord(v.snd.chord,v.snd.root,v.snd.scale);const root=v.snd.root,chord=v.snd.chord,t=AC.currentTime,bright=1-(fy||.5);const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(root,0)*(3+bright*6);lp.Q.value=1.4;const out=AC.createGain();out.gain.value=.32;lp.connect(out);out.connect(master);if(revIn){const rs=AC.createGain();rs.gain.value=.95;lp.connect(rs);rs.connect(revIn);}if(delIn){const ds=AC.createGain();ds.gain.value=.85;lp.connect(ds);ds.connect(delIn);}const g=AC.createGain();g.gain.value=0;g.connect(lp);const oscs=[];chord.forEach(st=>[-5,5].forEach(det=>{const f=freq(root,st+12)*Math.pow(2,det/1200),car=AC.createOscillator();car.type="sine";car.frequency.value=f;const mod=AC.createOscillator();mod.type="sine";mod.frequency.value=f;const mi=AC.createGain();mi.gain.setValueAtTime(f*3,t);mi.gain.exponentialRampToValueAtTime(f*.5,t+.6);mod.connect(mi);mi.connect(car.frequency);const cg=AC.createGain();cg.gain.value=.5/chord.length;car.connect(cg);cg.connect(g);car.start();mod.start();oscs.push(car,mod);}));g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.6,t+.1);g.gain.exponentialRampToValueAtTime(.42,t+.6);v.osc=oscs;v.g=g;v.filt=lp;v.active=true;v.base=freq(root,0);}
+function voiceOn(v,fx,fy){audioStart();audioResume();if(v.active)voiceOff(v);setChord(v.snd.chord,v.snd.root,v.snd.scale);const root=v.snd.root,chord=v.snd.chord,t=AC.currentTime,bright=1-(fy||.5);const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(root,0)*(2.5+bright*5);lp.Q.value=1.4;const sh=AC.createWaveShaper();sh.curve=softClip(.28);sh.oversample="2x";lp.connect(sh);const out=AC.createGain();out.gain.value=1;sh.connect(out);const dry=AC.createGain();dry.gain.value=.4;out.connect(dry);dry.connect(master);if(revIn){const rs=AC.createGain();rs.gain.value=.55;out.connect(rs);rs.connect(revIn);}if(delIn){const ds=AC.createGain();ds.gain.value=.6;out.connect(ds);ds.connect(delIn);}const g=AC.createGain();g.gain.value=0;g.connect(lp);const oscs=[];chord.forEach(st=>[0,12,-12].forEach(det=>{const o=AC.createOscillator();o.type="sawtooth";o.frequency.value=freq(root,st+12);o.detune.value=det;const og=AC.createGain();og.gain.value=.5/chord.length/3;o.connect(og);og.connect(g);o.start();oscs.push(o);}));g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.55,t+.012);g.gain.exponentialRampToValueAtTime(.36,t+.3);v.osc=oscs;v.g=g;v.filt=lp;v.active=true;v.base=freq(root,0);}
 function voiceBend(v,fx,fy){if(!v.active||!AC)return;const bright=1-(fy||.5);v.filt.frequency.setTargetAtTime(v.base*(2+bright*9+(fx||0)*2),AC.currentTime,.05);}
 function voiceOff(v){if(!v.active||!AC)return;const t=AC.currentTime;v.g.gain.cancelScheduledValues(t);v.g.gain.setValueAtTime(Math.max(.0001,v.g.gain.value),t);v.g.gain.exponentialRampToValueAtTime(.0001,t+1.1);const o=v.osc;setTimeout(()=>o.forEach(x=>{try{x.stop();}catch(e){}}),1200);v.active=false;}
 // visual -> audio: card activity + discrete events drive dub stabs/grains in the card key (AUDIBLE)
