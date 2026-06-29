@@ -8,8 +8,19 @@
 <style>
   :root{--bg:#04060a;--panel:#070c10;--line:#15303a;--line2:#0d2026;--p:#39ff0e;--ink:#9fb4ad;--ink-dim:#4c6159;--mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;--z-ov:60;--z-glitch:80;--z-nudge:90;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);min-height:100dvh}
-  body{background-image:radial-gradient(circle at 50% -10%,#07140f 0%,transparent 55%),repeating-linear-gradient(0deg,rgba(57,255,14,.02) 0 1px,transparent 1px 3px)}
+  html,body{margin:0;background:#03040a;color:var(--ink);font-family:var(--mono);min-height:100dvh}
+  /* cyberpunk-Tokyo rain scene behind everything */
+  #scene{position:fixed;inset:0;z-index:0;display:block;width:100vw;height:100dvh}
+  /* the workbench rendered as a screen set back in the scene (VR-monitor feel) */
+  #screen{position:relative;z-index:1;max-width:1180px;margin:26px auto 0;border:1px solid #16323a;border-radius:12px;
+    background:linear-gradient(#060a0cdd,#04070af2);
+    background-image:radial-gradient(circle at 50% -10%,#07140f 0%,transparent 55%),repeating-linear-gradient(0deg,rgba(57,255,14,.02) 0 1px,transparent 1px 3px);
+    box-shadow:0 40px 120px #000c, 0 0 0 6px #070b0e, 0 0 0 7px #123038, 0 0 70px #0bd4ff22, 0 0 120px #ff2bd622;overflow:hidden}
+  #screen .screenglass{position:absolute;inset:0;pointer-events:none;z-index:40;border-radius:12px;
+    background:linear-gradient(118deg,#ffffff0a 0%,transparent 26%,transparent 72%,#33ffd008 100%);
+    box-shadow:inset 0 0 120px #000a, inset 0 0 0 1px #1a3b44}
+  #screen .screenglass::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#0000 0 2px,#00000026 2px 3px);border-radius:12px}
+  @media(max-width:640px){#screen{margin:8px;border-radius:8px;box-shadow:0 18px 50px #000c,0 0 0 4px #070b0e,0 0 0 5px #123038,0 0 40px #0bd4ff22}}
   .bar{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:max(10px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line);background:linear-gradient(#050809,#04070acc);backdrop-filter:blur(4px);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
   .bar b{color:var(--p)} .bar .stat{color:var(--ink-dim)} .bar .stat em{color:#33ffd0;font-style:normal} .bar .spacer{flex:1}
   .chip{border:1px solid var(--line);padding:7px 11px;min-height:34px;color:var(--ink);cursor:pointer;background:#08110d;letter-spacing:.1em}
@@ -58,14 +69,18 @@
 </style>
 </head>
 <body>
+  <canvas id="scene"></canvas>
+  <div id="screen"><div class="screenglass"></div>
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
     <span class="spacer"></span>
+    <span class="chip on" id="audver" title="режим звука">DUB·2</span>
     <span class="chip" id="regenAll">⟳ REGEN</span>
     <span class="chip on" id="sound">♪ ЗВУК</span>
   </div>
   <div class="grid" id="grid"></div>
   <div class="footnote">проткни любой объект · держи дольше — он раскроется · открой один, потом другой</div>
+  </div>
 
   <div id="ov"><div class="obar"><b id="ov-id"></b>
       <span class="chip" id="ov-regen">⟳</span><span class="chip" id="ov-png">▣</span><span class="chip" id="ov-close">✕</span></div>
@@ -153,6 +168,21 @@ function composite(c,bf,w,h,mode,t){if(mode===0){c.drawImage(bf,0,0,w,h);return;
 //// fragment + easter-egg layer (his essence INSIDE the canvas)
 const GL="█▓▒░╳#@%&¤§/\\<>";
 function corrupt(s,a){let o="";for(const ch of s){o+=(ch!==" "&&Math.random()<a)?GL[(Math.random()*GL.length)|0]:ch;}return o;}
+// infinite, (almost) never-repeating confessions — assembled from the card's own fragments
+const CONJ=["и","но","а","и снова","и опять","и всё равно","и поэтому","и теперь","и из-за этого","а внутри"];
+const TAILS=["и я не знаю что с этим делать","и не знаю как иначе","и держу это в себе","и никому не говорю","и притворяюсь что норм","и так каждый день","и так годами","и устал от этого","и не могу остановиться","и боюсь признать","и некому сказать","и сам себе не верю"];
+const LEAD=["иногда","в последнее время","чаще всего","ночью","когда тихо","если честно","на самом деле","всё чаще","под утро","когда один"];
+function cap(s){return s?s[0].toUpperCase()+s.slice(1):s;}
+function pick(a){return a[(Math.random()*a.length)|0];}
+const seenConf=new Set();
+function makeConfession(d){const F=d.frags,C=d.conf;for(let i=0;i<8;i++){let s;const r=Math.random();
+  if(r<.22)s=pick(C);
+  else if(r<.46)s=cap(pick(F))+", "+pick(CONJ)+" "+pick(F)+" — "+pick(TAILS);
+  else if(r<.66)s=cap(pick(LEAD))+" "+pick(F)+", "+pick(CONJ)+" "+pick(F);
+  else if(r<.83)s=cap(pick(F))+". "+cap(pick(F))+". "+cap(pick(TAILS))+".";
+  else s=pick(C).replace(/\.$/,"")+" — "+pick(TAILS);
+  if(!seenConf.has(s)){seenConf.add(s);if(seenConf.size>500)seenConf.clear();return s;}}
+ return pick(C);}
 function makeFrag(d,seed){const r=rng(seed^0x51ed),pool=[...d.frags,...d.frags,...(d.labels||[])].filter(Boolean),isVoid=d.emotion.k==="void";
  const sp=()=>{const side=(r()*4)|0;let x=r(),y=r();if(side===0)y=-.05;else if(side===1)y=1.05;else if(side===2)x=-.05;else x=1.05;return{txt:pool.length?pool[(r()*pool.length)|0]:"…",x,y,born:-r()*4000,life:4500+r()*5000,sharp:.55+r()*.5,emo:r()<.62,clar:r()<.18,col:r()<.4};};
  const F=[];for(let i=0;i<8;i++)F.push(sp());return{F,sp,r,isVoid};}
@@ -171,6 +201,7 @@ function wrap(s,n){const wds=s.split(" "),L=[];let cur="";for(const wd of wds){i
 
 //// ===================== AUDIO v7: melancholic dreamcore dub ===============
 let AC,master,revIn,delIn,bedSub=null,padFilt=null,bedOn=true,started=false,noiseBuf=null;
+let audioVer=2,bedV1Gain=null,bedV2Gain=null;  // 1=dreamcore  2=Paul St.Hilaire dark dub
 const GK=window.GKEY||{root:-7,scale:"aeolian"};const GROOT=GK.root,GSCALE=GK.scale;
 let curRoot=GROOT,curChord=[0,3,7,10],curScale=GSCALE,curBright=.3,curReg=0;
 const SCALES={aeolian:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],locrian:[0,1,3,5,6,8,10],minor:[0,2,3,5,7,8,10]};
@@ -179,16 +210,23 @@ function impulse(sec,dec){const len=AC.sampleRate*sec,b=AC.createBuffer(2,len,AC
 function freq(root,st){return 110*Math.pow(2,(root+st)/12);}
 function audioStart(){if(started)return;started=true;AC=new(window.AudioContext||window.webkitAudioContext)();
  master=AC.createGain();master.gain.value=0.0;const tape=AC.createWaveShaper();tape.curve=softClip(.22);tape.oversample="2x";const comp=AC.createDynamicsCompressor();master.connect(tape);tape.connect(comp);comp.connect(AC.destination);
- const rev=AC.createConvolver();rev.buffer=impulse(5,2.2);revIn=AC.createGain();revIn.gain.value=.9;const ro=AC.createGain();ro.gain.value=.85;revIn.connect(rev);rev.connect(ro);ro.connect(master);
+ const rev=AC.createConvolver();rev.buffer=impulse(6.5,2);revIn=AC.createGain();revIn.gain.value=.95;const ro=AC.createGain();ro.gain.value=.85;revIn.connect(rev);rev.connect(ro);ro.connect(master);
  // long dreamy dub delay (no tempo lock)
  const dl=AC.createDelay(2);dl.delayTime.value=.55;const fb=AC.createGain();fb.gain.value=.6;const df=AC.createBiquadFilter();df.type="lowpass";df.frequency.value=800;delIn=AC.createGain();delIn.gain.value=.5;delIn.connect(dl);dl.connect(df);df.connect(fb);fb.connect(dl);dl.connect(master);dl.connect(revIn);
  const wow=AC.createOscillator();wow.frequency.value=.18;const wowAmt=AC.createGain();wowAmt.gain.value=.0016;wow.connect(wowAmt);wowAmt.connect(dl.delayTime);wow.start();
  // sub drone
  bedSub=AC.createOscillator();bedSub.type="sine";const sg=AC.createGain();sg.gain.value=.13;bedSub.frequency.value=freq(curRoot,0)/2;bedSub.connect(sg);sg.connect(master);bedSub.start();
- // soft dreamy pad drone (detuned triangles on root+5th+oct, washed) — the bed
- padFilt=AC.createBiquadFilter();padFilt.type="lowpass";padFilt.frequency.value=freq(curRoot,0)*(2.5+curBright*4);padFilt.Q.value=.8;const pg=AC.createGain();pg.gain.value=.06;padFilt.connect(pg);pg.connect(master);pg.connect(revIn);
+ // ===== BED v1 (dreamcore): soft detuned-triangle pad drone, gated =====
+ bedV1Gain=AC.createGain();bedV1Gain.gain.value=(audioVer===1?1:0);bedV1Gain.connect(master);bedV1Gain.connect(revIn);
+ padFilt=AC.createBiquadFilter();padFilt.type="lowpass";padFilt.frequency.value=freq(curRoot,0)*(2.5+curBright*4);padFilt.Q.value=.8;const pg=AC.createGain();pg.gain.value=.06;padFilt.connect(pg);pg.connect(bedV1Gain);
  [0,7,12].forEach(st=>[-7,7].forEach(det=>{const o=AC.createOscillator();o.type="triangle";o.frequency.value=freq(curRoot,st);o.detune.value=det;const g=AC.createGain();g.gain.value=.5/3;o.connect(g);g.connect(padFilt);o.start();}));
  const plfo=AC.createOscillator();plfo.frequency.value=.05;const plg=AC.createGain();plg.gain.value=120;plfo.connect(plg);plg.connect(padFilt.frequency);plfo.start();
+ // ===== BED v2 (Paul St.Hilaire dark dub): minimal, huge, no rhythm =====
+ bedV2Gain=AC.createGain();bedV2Gain.gain.value=(audioVer===2?.9:0);bedV2Gain.connect(master);bedV2Gain.connect(revIn);
+ {const o=AC.createOscillator();o.type="sawtooth";o.frequency.value=freq(curRoot,7)/2;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=150;lp.Q.value=9;const g=AC.createGain();g.gain.value=.12;o.connect(lp);lp.connect(g);g.connect(bedV2Gain);const fl=AC.createOscillator();fl.frequency.value=.06;const fg=AC.createGain();fg.gain.value=60;fl.connect(fg);fg.connect(lp.frequency);fl.start();o.start();} // low bass, resonant
+ {const o=AC.createOscillator();o.type="triangle";o.frequency.value=freq(curRoot,12);const o2=AC.createOscillator();o2.type="triangle";o2.frequency.value=freq(curRoot,15);o2.detune.value=8;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=700;lp.Q.value=5;const g=AC.createGain();g.gain.value=.05;o.connect(lp);o2.connect(lp);lp.connect(g);g.connect(bedV2Gain);if(revIn)g.connect(revIn);if(delIn)g.connect(delIn);const vib=AC.createOscillator();vib.frequency.value=.4;const vg=AC.createGain();vg.gain.value=4;vib.connect(vg);vg.connect(o.detune);vib.start();const fl=AC.createOscillator();fl.frequency.value=.07;const fg=AC.createGain();fg.gain.value=220;fl.connect(fg);fg.connect(lp.frequency);fl.start();o.start();o2.start();} // pad1 mid, wet
+ {const o=AC.createOscillator();o.type="triangle";o.frequency.value=freq(curRoot,24);const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=freq(curRoot,24)*2;bp.Q.value=3;const g=AC.createGain();g.gain.value=.014;o.connect(bp);bp.connect(g);g.connect(bedV2Gain);if(revIn)g.connect(revIn);o.start();} // pad2 airy
+ {const a=AC.createOscillator();a.type="sine";a.frequency.value=freq(curRoot,0);const b=AC.createOscillator();b.type="sine";b.frequency.value=freq(curRoot,0)*1.013;const g=AC.createGain();g.gain.value=.05;a.connect(g);b.connect(g);g.connect(bedV2Gain);a.start();b.start();} // pad3 interference beats
  // warm vinyl dust (soft Jelinek bed)
  {const src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=1400;const g=AC.createGain();g.gain.value=.016;src.connect(lp);lp.connect(g);g.connect(master);src.start();}
  microsound();ambientBloom();
@@ -208,7 +246,14 @@ function softClip(amt){const n=2048,c=new Float32Array(n);for(let i=0;i<n;i++){c
 // soft pad voice — detuned triangles, slow attack, long release, washed
 function padVoice(f,t,dur,gain,out){const o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const o2=AC.createOscillator();o2.type="triangle";o2.frequency.value=f;o2.detune.value=Math.random()*14-7;const g=AC.createGain();g.gain.value=0;o.connect(g);o2.connect(g);g.connect(out);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(gain,t+.4);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.start(t);o2.start(t);o.stop(t+dur+.1);o2.stop(t+dur+.1);}
 // a soft chord BLOOM in the ONE key. mood = chord colour + brightness + register (from the card)
-function dubChord(chord,o){if(!AC)return;o=o||{};const t=o.when||AC.currentTime,dur=o.dur||4.5,vel=o.vel==null?.4:o.vel,bright=o.bright==null?curBright:o.bright,reg=o.reg||0;
+// v2 bloom — huge slow Paul St.Hilaire swell: 2.5s attack, filter decays down, drowned in reverb
+function bloomV2(chord,o){o=o||{};const t=o.when||AC.currentTime,dur=o.dur||10,vel=o.vel==null?.4:o.vel,reg=o.reg||0;
+ const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(3400,t);lp.frequency.exponentialRampToValueAtTime(1100,t+dur*.6);lp.Q.value=5;
+ const dry=AC.createGain();dry.gain.value=.16;lp.connect(dry);dry.connect(master);
+ if(revIn){const rs=AC.createGain();rs.gain.value=1;lp.connect(rs);rs.connect(revIn);}
+ if(delIn){const ds=AC.createGain();ds.gain.value=.5;lp.connect(ds);ds.connect(delIn);}
+ chord.forEach(st=>[-8,8].forEach(det=>{const o2=AC.createOscillator();o2.type="triangle";o2.frequency.value=freq(curRoot,st+12+reg);o2.detune.value=det;const g=AC.createGain();g.gain.value=0;o2.connect(g);g.connect(lp);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vel*.4/chord.length,t+2.5);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o2.start(t);o2.stop(t+dur+.2);}));}
+function dubChord(chord,o){if(!AC)return;if(audioVer===2)return bloomV2(chord,o);o=o||{};const t=o.when||AC.currentTime,dur=o.dur||4.5,vel=o.vel==null?.4:o.vel,bright=o.bright==null?curBright:o.bright,reg=o.reg||0;
  const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(curRoot,0)*(2+bright*5);lp.Q.value=.9;
  const dry=AC.createGain();dry.gain.value=.3;lp.connect(dry);dry.connect(master);
  if(revIn){const rs=AC.createGain();rs.gain.value=.85;lp.connect(rs);rs.connect(revIn);}
@@ -229,7 +274,7 @@ function voiceOff(v){if(!v.active||!AC)return;const t=AC.currentTime;v.g.gain.ca
 // visual -> audio: card activity + discrete events drive dub stabs/grains in the card key (AUDIBLE)
 // visual -> sound: the chord BLOOMS from what's happening on the canvas (slow, sparse, sad)
 function sonify(card,t){if(!AC||!bedOn)return;const s=card.state;if(!s)return;const sn=card.d.sound,act=s.activity||.3,sp=card.spd||1,tone=card.tone==null?.5:card.tone;
- card._acc=(card._acc||0)+act*.02*sp;
+ card._acc=(card._acc||0)+act*(audioVer===2?.006:.02)*sp;
  if(card._acc>=1){card._acc=0;dubChord(sn.chord,{vel:.28+act*.3,bright:sn.bright+tone*.3,reg:sn.reg,dur:4+Math.random()*3});}
  if(s.pulse){s.pulse=0;dubChord(sn.chord,{vel:.42,bright:sn.bright+.2,reg:sn.reg,dur:4});}
  if(Math.random()<act*.05)grain(.22+act*.2,200+Math.random()*800,.03+Math.random()*.07,true);}
@@ -255,7 +300,7 @@ function buildCard(d){const el=document.createElement("div");el.className="card 
  el.querySelector('[data-a="png"]').onclick=e=>{e.stopPropagation();exportPNG(cv,d.id);};
  el.querySelector('[data-a="focus"]').onclick=e=>{e.stopPropagation();openFocus(d);};
  const rel=ev=>{const r=wrap.getBoundingClientRect();return[(ev.clientX-r.left)/r.width,(ev.clientY-r.top)/r.height];};
- wrap.addEventListener("pointerdown",ev=>{const[x,y]=rel(ev);voiceOn(card.voice,x,y);setMood(d.sound);try{wrap.setPointerCapture(ev.pointerId);}catch(_){}card.holdTimer=setTimeout(()=>{card.reveal={txt:d.conf[(Math.random()*d.conf.length)|0],t0:performance.now()};},650);});
+ wrap.addEventListener("pointerdown",ev=>{const[x,y]=rel(ev);voiceOn(card.voice,x,y);setMood(d.sound);try{wrap.setPointerCapture(ev.pointerId);}catch(_){}card.holdTimer=setTimeout(()=>{card.reveal={txt:makeConfession(d),t0:performance.now()};},650);});
  wrap.addEventListener("pointermove",ev=>{if(card.voice.active){const[x,y]=rel(ev);voiceBend(card.voice,x,y);}});
  const up=()=>{voiceOff(card.voice);clearTimeout(card.holdTimer);};wrap.addEventListener("pointerup",up);wrap.addEventListener("pointercancel",up);wrap.addEventListener("pointerleave",up);
  return card;}
@@ -272,7 +317,7 @@ document.getElementById("ov-png").onclick=()=>exportPNG(document.getElementById(
  slT&&slT.addEventListener("input",e=>{ovTone=e.target.value/100;});
  slD&&slD.addEventListener("input",e=>{ovDens=.3+(e.target.value/100)*1.9;clearTimeout(window._dz);window._dz=setTimeout(()=>{if(ovd)ovFit();},130);});}
 (function(){const st=document.querySelector("#ov .stage"),rel=e=>{const r=st.getBoundingClientRect();return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];};
- st.addEventListener("pointerdown",e=>{if(!ovd)return;const[x,y]=rel(e);voiceOn(ovV,x,y);try{st.setPointerCapture(e.pointerId);}catch(_){}ovHold=setTimeout(()=>{ovReveal={txt:ovd.conf[(Math.random()*ovd.conf.length)|0],t0:performance.now()};},650);});
+ st.addEventListener("pointerdown",e=>{if(!ovd)return;const[x,y]=rel(e);voiceOn(ovV,x,y);try{st.setPointerCapture(e.pointerId);}catch(_){}ovHold=setTimeout(()=>{ovReveal={txt:makeConfession(ovd),t0:performance.now()};},650);});
  st.addEventListener("pointermove",e=>{if(ovV&&ovV.active){const[x,y]=rel(e);voiceBend(ovV,x,y);}});
  const up=()=>{if(ovV)voiceOff(ovV);clearTimeout(ovHold);};st.addEventListener("pointerup",up);st.addEventListener("pointercancel",up);})();
 
@@ -298,14 +343,33 @@ cards.forEach(c=>io.observe(c.el));
 addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{cards.forEach(c=>{if(c.state)c.rebuild();});if(ovd)ovFit();},220);});
 document.getElementById("regenAll").onclick=()=>cards.forEach(c=>{c.seed=(c.seed*1103515245+12345)>>>0;c.fixedEng=null;if(c.state)c.rebuild();});
 document.getElementById("sound").onclick=e=>{audioStart();audioResume();bedOn=!bedOn;if(AC)master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+.5);e.target.textContent=bedOn?"♪ ЗВУК":"♪ ТИХО";e.target.classList.toggle("on",bedOn);};
+document.getElementById("audver").onclick=e=>{audioStart();audioResume();audioVer=audioVer===1?2:1;if(AC){const n=AC.currentTime;bedV1Gain.gain.linearRampToValueAtTime(audioVer===1?1:0,n+2);bedV2Gain.gain.linearRampToValueAtTime(audioVer===2?.9:0,n+2);}e.target.textContent="DUB·"+audioVer;};
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("on");clearTimeout(window._tt);window._tt=setTimeout(()=>el.classList.remove("on"),3400);}
 // first-entry nudge — captures gesture, starts audio (sound on by default)
 const nudge=document.getElementById("nudge");
 nudge.addEventListener("pointerdown",()=>{audioStart();audioResume();nudge.classList.add("off");toast("проткни объект · держи — раскроется");});
 
 //// master loop
+//// cyberpunk-Tokyo rainy night scene (behind the screen)
+const scn=document.getElementById("scene");let sx=null,sW=0,sH=0,rain=[],neon=[],bok=[];
+function sceneFit(){const dpr=Math.min(2,devicePixelRatio||1);sW=innerWidth;sH=innerHeight;scn.width=sW*dpr;scn.height=sH*dpr;sx=scn.getContext("2d");sx.setTransform(dpr,0,0,dpr,0,0);
+ const R=rng(7);rain=[];for(let i=0;i<170;i++)rain.push({x:R()*sW,y:R()*sH,l:8+R()*22,s:5+R()*9});
+ const NC=["#0bd4ff","#ff2bd6","#ff5a3c","#7a5cff","#39ff0e","#ff2b6a"];neon=[];for(let i=0;i<16;i++)neon.push({x:R()*sW,y:R()*sH*.7,w:6+R()*18,h:60+R()*260,c:NC[(R()*NC.length)|0],f:R()});
+ bok=[];for(let i=0;i<22;i++)bok.push({x:R()*sW,y:R()*sH,r:8+R()*46,c:NC[(R()*NC.length)|0],a:.04+R()*.08,vx:(R()-.5)*.12});}
+sceneFit();addEventListener("resize",()=>{clearTimeout(window._sz);window._sz=setTimeout(sceneFit,200);});
+function sceneDraw(t){if(!sx)return;const w=sW,h=sH;
+ const g=sx.createLinearGradient(0,0,0,h);g.addColorStop(0,"#070a16");g.addColorStop(.55,"#0a0612");g.addColorStop(1,"#02030a");sx.fillStyle=g;sx.fillRect(0,0,w,h);
+ sx.save();sx.globalCompositeOperation="lighter";
+ for(const b of bok){b.x+=b.vx;if(b.x<-60)b.x=w+60;if(b.x>w+60)b.x=-60;const rg=sx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);rg.addColorStop(0,b.c+hx(b.a));rg.addColorStop(1,b.c+"00");sx.fillStyle=rg;sx.beginPath();sx.arc(b.x,b.y,b.r,0,TAU);sx.fill();}
+ for(const n of neon){const fl=.10+.07*Math.abs(Math.sin(t*.002+n.f*9))*(Math.random()<.02?.3:1);sx.shadowBlur=24;sx.shadowColor=n.c;sx.fillStyle=n.c+hx(fl);sx.fillRect(n.x,n.y,n.w,n.h);
+  sx.globalAlpha=.10;sx.fillRect(n.x,h-(n.y+n.h)+h*.0,n.w,n.h);sx.globalAlpha=1;}
+ sx.shadowBlur=0;sx.restore();
+ sx.strokeStyle="#bfe9ff30";sx.lineWidth=1;sx.beginPath();for(const d of rain){sx.moveTo(d.x,d.y);sx.lineTo(d.x-d.l*.28,d.y+d.l);d.y+=d.s*1.6;d.x-=d.s*.45;if(d.y>h){d.y=-d.l;d.x=Math.random()*w;}if(d.x<0)d.x+=w;}sx.stroke();
+ const vg=sx.createRadialGradient(w/2,h*.5,h*.2,w/2,h*.5,h*.85);vg.addColorStop(0,"#0000");vg.addColorStop(1,"#02030acc");sx.fillStyle=vg;sx.fillRect(0,0,w,h);}
+
 let frame=0;
 function loop(t){requestAnimationFrame(loop);frame++;
+ sceneDraw(t);
  for(const c of cards){if(!c.vis||!c.state||!c.m||!c.bx)continue;if(c.heavy&&(frame&1))continue;const{c:ctx,w,h}=c.m;c.bx.clearRect(0,0,w,h);R[c.eng].frame(c.bx,w,h,t,c.state,c.P);ctx.clearRect(0,0,w,h);composite(ctx,c.bf,w,h,c.sym,t);fragLayer(ctx,w,h,t,c.fr,c.P);if(c.reveal){if(!revealLayer(ctx,w,h,t,c.reveal,c.P))c.reveal=null;}}
  if(ovd&&ovM&&ovBx){const{c:ctx,w,h}=ovM,tm=t*ovSpd;ovBx.clearRect(0,0,w,h);R[ovEng].frame(ovBx,w,h,tm,ovS,ovP);ctx.clearRect(0,0,w,h);composite(ctx,ovBf,w,h,ovSym,tm);
    const tt=ovTone-.5;if(Math.abs(tt)>.02){ctx.globalAlpha=Math.abs(tt)*.22;ctx.fillStyle=tt>0?ovP.b:"#000307";ctx.fillRect(0,0,w,h);ctx.globalAlpha=1;}
