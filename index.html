@@ -8,19 +8,8 @@
 <style>
   :root{--bg:#04060a;--panel:#070c10;--line:#15303a;--line2:#0d2026;--p:#39ff0e;--ink:#9fb4ad;--ink-dim:#4c6159;--mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;--z-ov:60;--z-glitch:80;--z-nudge:90;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;background:#03040a;color:var(--ink);font-family:var(--mono);min-height:100dvh}
-  /* cyberpunk-Tokyo rain scene behind everything */
-  #scene{position:fixed;inset:0;z-index:0;display:block;width:100vw;height:100dvh}
-  /* the workbench rendered as a screen set back in the scene (VR-monitor feel) */
-  #screen{position:relative;z-index:1;max-width:1180px;margin:26px auto 0;border:1px solid #16323a;border-radius:12px;
-    background:linear-gradient(#060a0cdd,#04070af2);
-    background-image:radial-gradient(circle at 50% -10%,#07140f 0%,transparent 55%),repeating-linear-gradient(0deg,rgba(57,255,14,.02) 0 1px,transparent 1px 3px);
-    box-shadow:0 40px 120px #000c, 0 0 0 6px #070b0e, 0 0 0 7px #123038, 0 0 70px #0bd4ff22, 0 0 120px #ff2bd622;overflow:hidden}
-  #screen .screenglass{position:absolute;inset:0;pointer-events:none;z-index:40;border-radius:12px;
-    background:linear-gradient(118deg,#ffffff0a 0%,transparent 26%,transparent 72%,#33ffd008 100%);
-    box-shadow:inset 0 0 120px #000a, inset 0 0 0 1px #1a3b44}
-  #screen .screenglass::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#0000 0 2px,#00000026 2px 3px);border-radius:12px}
-  @media(max-width:640px){#screen{margin:8px;border-radius:8px;box-shadow:0 18px 50px #000c,0 0 0 4px #070b0e,0 0 0 5px #123038,0 0 40px #0bd4ff22}}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);min-height:100dvh}
+  body{background-image:radial-gradient(circle at 50% -10%,#07140f 0%,transparent 55%),repeating-linear-gradient(0deg,rgba(57,255,14,.02) 0 1px,transparent 1px 3px)}
   .bar{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:max(10px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line);background:linear-gradient(#050809,#04070acc);backdrop-filter:blur(4px);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
   .bar b{color:var(--p)} .bar .stat{color:var(--ink-dim)} .bar .stat em{color:#33ffd0;font-style:normal} .bar .spacer{flex:1}
   .chip{border:1px solid var(--line);padding:7px 11px;min-height:34px;color:var(--ink);cursor:pointer;background:#08110d;letter-spacing:.1em}
@@ -69,8 +58,6 @@
 </style>
 </head>
 <body>
-  <canvas id="scene"></canvas>
-  <div id="screen"><div class="screenglass"></div>
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
     <span class="spacer"></span>
@@ -80,7 +67,6 @@
   </div>
   <div class="grid" id="grid"></div>
   <div class="footnote">проткни любой объект · держи дольше — он раскроется · открой один, потом другой</div>
-  </div>
 
   <div id="ov"><div class="obar"><b id="ov-id"></b>
       <span class="chip" id="ov-regen">⟳</span><span class="chip" id="ov-png">▣</span><span class="chip" id="ov-close">✕</span></div>
@@ -350,26 +336,8 @@ const nudge=document.getElementById("nudge");
 nudge.addEventListener("pointerdown",()=>{audioStart();audioResume();nudge.classList.add("off");toast("проткни объект · держи — раскроется");});
 
 //// master loop
-//// cyberpunk-Tokyo rainy night scene (behind the screen)
-const scn=document.getElementById("scene");let sx=null,sW=0,sH=0,rain=[],neon=[],bok=[];
-function sceneFit(){const dpr=Math.min(2,devicePixelRatio||1);sW=innerWidth;sH=innerHeight;scn.width=sW*dpr;scn.height=sH*dpr;sx=scn.getContext("2d");sx.setTransform(dpr,0,0,dpr,0,0);
- const R=rng(7);rain=[];for(let i=0;i<170;i++)rain.push({x:R()*sW,y:R()*sH,l:8+R()*22,s:5+R()*9});
- const NC=["#0bd4ff","#ff2bd6","#ff5a3c","#7a5cff","#39ff0e","#ff2b6a"];neon=[];for(let i=0;i<16;i++)neon.push({x:R()*sW,y:R()*sH*.7,w:6+R()*18,h:60+R()*260,c:NC[(R()*NC.length)|0],f:R()});
- bok=[];for(let i=0;i<22;i++)bok.push({x:R()*sW,y:R()*sH,r:8+R()*46,c:NC[(R()*NC.length)|0],a:.04+R()*.08,vx:(R()-.5)*.12});}
-sceneFit();addEventListener("resize",()=>{clearTimeout(window._sz);window._sz=setTimeout(sceneFit,200);});
-function sceneDraw(t){if(!sx)return;const w=sW,h=sH;
- const g=sx.createLinearGradient(0,0,0,h);g.addColorStop(0,"#070a16");g.addColorStop(.55,"#0a0612");g.addColorStop(1,"#02030a");sx.fillStyle=g;sx.fillRect(0,0,w,h);
- sx.save();sx.globalCompositeOperation="lighter";
- for(const b of bok){b.x+=b.vx;if(b.x<-60)b.x=w+60;if(b.x>w+60)b.x=-60;const rg=sx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);rg.addColorStop(0,b.c+hx(b.a));rg.addColorStop(1,b.c+"00");sx.fillStyle=rg;sx.beginPath();sx.arc(b.x,b.y,b.r,0,TAU);sx.fill();}
- for(const n of neon){const fl=.10+.07*Math.abs(Math.sin(t*.002+n.f*9))*(Math.random()<.02?.3:1);sx.shadowBlur=24;sx.shadowColor=n.c;sx.fillStyle=n.c+hx(fl);sx.fillRect(n.x,n.y,n.w,n.h);
-  sx.globalAlpha=.10;sx.fillRect(n.x,h-(n.y+n.h)+h*.0,n.w,n.h);sx.globalAlpha=1;}
- sx.shadowBlur=0;sx.restore();
- sx.strokeStyle="#bfe9ff30";sx.lineWidth=1;sx.beginPath();for(const d of rain){sx.moveTo(d.x,d.y);sx.lineTo(d.x-d.l*.28,d.y+d.l);d.y+=d.s*1.6;d.x-=d.s*.45;if(d.y>h){d.y=-d.l;d.x=Math.random()*w;}if(d.x<0)d.x+=w;}sx.stroke();
- const vg=sx.createRadialGradient(w/2,h*.5,h*.2,w/2,h*.5,h*.85);vg.addColorStop(0,"#0000");vg.addColorStop(1,"#02030acc");sx.fillStyle=vg;sx.fillRect(0,0,w,h);}
-
 let frame=0;
 function loop(t){requestAnimationFrame(loop);frame++;
- sceneDraw(t);
  for(const c of cards){if(!c.vis||!c.state||!c.m||!c.bx)continue;if(c.heavy&&(frame&1))continue;const{c:ctx,w,h}=c.m;c.bx.clearRect(0,0,w,h);R[c.eng].frame(c.bx,w,h,t,c.state,c.P);ctx.clearRect(0,0,w,h);composite(ctx,c.bf,w,h,c.sym,t);fragLayer(ctx,w,h,t,c.fr,c.P);if(c.reveal){if(!revealLayer(ctx,w,h,t,c.reveal,c.P))c.reveal=null;}}
  if(ovd&&ovM&&ovBx){const{c:ctx,w,h}=ovM,tm=t*ovSpd;ovBx.clearRect(0,0,w,h);R[ovEng].frame(ovBx,w,h,tm,ovS,ovP);ctx.clearRect(0,0,w,h);composite(ctx,ovBf,w,h,ovSym,tm);
    const tt=ovTone-.5;if(Math.abs(tt)>.02){ctx.globalAlpha=Math.abs(tt)*.22;ctx.fillStyle=tt>0?ovP.b:"#000307";ctx.fillRect(0,0,w,h);ctx.globalAlpha=1;}
