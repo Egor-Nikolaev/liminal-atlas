@@ -61,7 +61,7 @@
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
     <span class="spacer"></span>
-    <span class="chip on" id="audver" title="режим звука">DUB·2</span>
+    <span class="chip on" id="audver" title="режим звука">DUB·1</span>
     <span class="chip" id="regenAll">⟳ REGEN</span>
     <span class="chip on" id="sound">♪ ЗВУК</span>
   </div>
@@ -94,7 +94,10 @@ function off(w,h){const c=document.createElement("canvas");c.width=Math.max(1,w|
 
 const PALS={ash:["#9bb0a6","#39ff0e","#3a4a40"],ice:["#33ffd0","#7ea6e0","#13303a"],moss:["#39ff0e","#67ab9f","#1a3a2a"],
  bile:["#c8ff33","#ffd966","#5a6a10"],void:["#39ff0e","#1f7a12","#0a1a0e"],ember:["#ff8a1e","#ff3b3b","#ffd966"],
- rust:["#ff8000","#ff5a2b","#7a4a2a"],bruise:["#9a7aff","#ff3b6a","#4a3a66"],bloodorange:["#ff5512","#ff8a1e","#ff0040"]};
+ rust:["#ff8000","#ff5a2b","#7a4a2a"],bruise:["#9a7aff","#ff3b6a","#4a3a66"],bloodorange:["#ff5512","#ff8a1e","#ff0040"],
+ slate:["#8aa6ba","#33ffd0","#28323e"],smoke:["#b3b3b3","#e0e0e0","#3a3a3a"],steel:["#7fb4d6","#48ffe0","#27384a"],
+ indigo:["#8a8aff","#36a6ff","#23204a"],plum:["#c07adf","#ff72b8","#3c2a4c"],sepia:["#d2a866","#ffd28a","#4a3a24"],
+ crimson:["#ff3b5a","#ff7a52","#4a1822"],teal:["#2fd6c4","#5ad0ff","#123a3a"]};
 function pal(mood){const p=PALS[mood]||PALS.void;return{a:p[0],b:p[1],c:p[2]};}
 
 //// ================= 19 ENGINES =================
@@ -187,7 +190,7 @@ function wrap(s,n){const wds=s.split(" "),L=[];let cur="";for(const wd of wds){i
 
 //// ===================== AUDIO v7: melancholic dreamcore dub ===============
 let AC,master,revIn,delIn,bedSub=null,padFilt=null,bedOn=true,started=false,noiseBuf=null;
-let audioVer=2,bedV1Gain=null,bedV2Gain=null;  // 1=dreamcore  2=Paul St.Hilaire dark dub
+let audioVer=1,bedV1Gain=null,bedV2Gain=null;  // 1=dreamcore (default)  2=Paul St.Hilaire dark dub
 const GK=window.GKEY||{root:-7,scale:"aeolian"};const GROOT=GK.root,GSCALE=GK.scale;
 let curRoot=GROOT,curChord=[0,3,7,10],curScale=GSCALE,curBright=.3,curReg=0;
 const SCALES={aeolian:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],locrian:[0,1,3,5,6,8,10],minor:[0,2,3,5,7,8,10]};
@@ -279,10 +282,10 @@ function buildCard(d){const el=document.createElement("div");el.className="card 
   <div class="cv"><canvas></canvas><div class="hold">держи — раскроется</div></div>
   <div class="cfoot"><button data-a="focus">◰ FOCUS</button><button data-a="regen">⟳</button><button data-a="png">▣</button></div>`;
  const cv=el.querySelector("canvas"),wrap=el.querySelector(".cv");
- const card={d,el,cv,wrap,seed:Math.abs(hash(d.id))%99999,state:null,fr:null,vis:false,voice:makeVoice(d.sound),P:pal(d.emotion.mood),eng:null,fixedEng:null,sym:0,reveal:null,heavy:false,bf:null,bx:null,holdTimer:null};
- function rebuild(){const m=fit(cv);card.m=m;card.eng=card.fixedEng||pickEngine(d,card.seed);card.sym=(card.seed>>4)%5;card.heavy=(card.eng==="reaction"||card.eng==="slime");card.bf=off(m.w*(Math.min(2,devicePixelRatio||1)),m.h*(Math.min(2,devicePixelRatio||1)));card.bx=card.bf.getContext("2d");const dpr=Math.min(2,devicePixelRatio||1);card.bx.setTransform(dpr,0,0,dpr,0,0);card.state=R[card.eng].make(d,card.seed,m.w,m.h,card.P);card.fr=makeFrag(d,card.seed);el.querySelector('#eng_'+d.id).textContent=card.eng.toUpperCase();}
+ const card={d,el,cv,wrap,seed:Math.abs(hash(d.id))%99999,state:null,fr:null,vis:false,voice:makeVoice(d.sound),P:pal(d.emotion.mood),eng:null,fixedEng:null,fixedSym:null,sym:0,reveal:null,heavy:false,bf:null,bx:null,holdTimer:null};
+ function rebuild(){const m=fit(cv);card.m=m;card.eng=card.fixedEng||pickEngine(d,card.seed);card.sym=(card.fixedSym!=null?card.fixedSym:(card.seed>>4)%5);card.heavy=(card.eng==="reaction"||card.eng==="slime");card.bf=off(m.w*(Math.min(2,devicePixelRatio||1)),m.h*(Math.min(2,devicePixelRatio||1)));card.bx=card.bf.getContext("2d");const dpr=Math.min(2,devicePixelRatio||1);card.bx.setTransform(dpr,0,0,dpr,0,0);card.state=R[card.eng].make(d,card.seed,m.w,m.h,card.P);card.fr=makeFrag(d,card.seed);el.querySelector('#eng_'+d.id).textContent=card.eng.toUpperCase();}
  card.rebuild=rebuild;
- el.querySelector('[data-a="regen"]').onclick=e=>{e.stopPropagation();card.seed=(card.seed*1103515245+12345)>>>0;card.fixedEng=null;rebuild();};
+ el.querySelector('[data-a="regen"]').onclick=e=>{e.stopPropagation();card.seed=(card.seed*1103515245+12345)>>>0;card.fixedEng=null;card.fixedSym=null;rebuild();};
  el.querySelector('[data-a="png"]').onclick=e=>{e.stopPropagation();exportPNG(cv,d.id);};
  el.querySelector('[data-a="focus"]').onclick=e=>{e.stopPropagation();openFocus(d);};
  const rel=ev=>{const r=wrap.getBoundingClientRect();return[(ev.clientX-r.left)/r.width,(ev.clientY-r.top)/r.height];};
@@ -321,13 +324,15 @@ function drawGlitch(t){if(t>glitchUntil){if(gcv.style.display!=="none")gcv.style
 //// boot
 const grid=document.getElementById("grid");
 // distinct engine per card on first load (shuffle deterministically)
-const SHUF=ENGINES.slice();{let rr=rng(0xA71A5);for(let i=SHUF.length-1;i>0;i--){const j=(rr()*(i+1))|0;[SHUF[i],SHUF[j]]=[SHUF[j],SHUF[i]];}}
-(window.ATLAS||[]).forEach((d,i)=>{const c=buildCard(d);c.fixedEng=SHUF[i%SHUF.length];cards.push(c);grid.appendChild(c.el);});
+// distinct (engine × symmetry) per card so no two cards look the same
+const COMBOS=[];for(const e of ENGINES)for(let s=0;s<5;s++)COMBOS.push([e,s]);
+{let rr=rng(0xA71A5);for(let i=COMBOS.length-1;i>0;i--){const j=(rr()*(i+1))|0;[COMBOS[i],COMBOS[j]]=[COMBOS[j],COMBOS[i]];}}
+(window.ATLAS||[]).forEach((d,i)=>{const c=buildCard(d);const cb=COMBOS[i%COMBOS.length];c.fixedEng=cb[0];c.fixedSym=cb[1];cards.push(c);grid.appendChild(c.el);});
 document.getElementById("s-cards").textContent=cards.length;
 const io=new IntersectionObserver(es=>es.forEach(e=>{const c=cards.find(c=>c.el===e.target);if(c){c.vis=e.isIntersecting;if(e.isIntersecting&&!c.state)c.rebuild();}}),{rootMargin:"140px"});
 cards.forEach(c=>io.observe(c.el));
 addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{cards.forEach(c=>{if(c.state)c.rebuild();});if(ovd)ovFit();},220);});
-document.getElementById("regenAll").onclick=()=>cards.forEach(c=>{c.seed=(c.seed*1103515245+12345)>>>0;c.fixedEng=null;if(c.state)c.rebuild();});
+document.getElementById("regenAll").onclick=()=>cards.forEach(c=>{c.seed=(c.seed*1103515245+12345)>>>0;c.fixedEng=null;c.fixedSym=null;if(c.state)c.rebuild();});
 document.getElementById("sound").onclick=e=>{audioStart();audioResume();bedOn=!bedOn;if(AC)master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+.5);e.target.textContent=bedOn?"♪ ЗВУК":"♪ ТИХО";e.target.classList.toggle("on",bedOn);};
 document.getElementById("audver").onclick=e=>{audioStart();audioResume();audioVer=audioVer===1?2:1;if(AC){const n=AC.currentTime;bedV1Gain.gain.linearRampToValueAtTime(audioVer===1?1:0,n+2);bedV2Gain.gain.linearRampToValueAtTime(audioVer===2?.9:0,n+2);}e.target.textContent="DUB·"+audioVer;};
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("on");clearTimeout(window._tt);window._tt=setTimeout(()=>el.classList.remove("on"),3400);}
