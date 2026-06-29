@@ -22,7 +22,8 @@
   .card::before{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px #0c1a1d,inset 0 0 32px #00000088;z-index:3}
   .corner{position:absolute;width:9px;height:9px;border:1px solid #1f7a12;z-index:4}
   .tl{top:6px;left:6px;border-right:0;border-bottom:0}.tr{top:6px;right:6px;border-left:0;border-bottom:0}.bl{bottom:6px;left:6px;border-right:0;border-top:0}.br{bottom:6px;right:6px;border-left:0;border-top:0}
-  .chead{display:flex;justify-content:space-between;padding:7px 9px 3px;font-size:9px;letter-spacing:.14em;color:var(--ink-dim)}
+  .chead{display:flex;justify-content:space-between;padding:7px 9px 2px;font-size:9px;letter-spacing:.14em;color:var(--ink-dim)}
+  .emo{padding:1px 9px 5px;font-size:13px;color:#dfeee6;letter-spacing:.02em}
   .chead .id{color:var(--p)}
   .cv{position:relative;aspect-ratio:1/1;background:radial-gradient(circle at 50% 52%,#06100b,#04080a 72%);border-top:1px solid var(--line2);touch-action:pan-y;cursor:crosshair}
   .cv canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -168,9 +169,10 @@ function revealLayer(c,w,h,t,rev,P){if(!rev)return false;const age=(t-rev.t0)/10
  c.restore();return true;}
 function wrap(s,n){const wds=s.split(" "),L=[];let cur="";for(const wd of wds){if((cur+wd).length>n){L.push(cur.trim());cur="";}cur+=wd+" ";}if(cur.trim())L.push(cur.trim());return L;}
 
-//// ===================== AUDIO v5: dub-techno ambient =====================
-let AC,master,revIn,delIn,bedSub=null,bedOn=true,started=false,noiseBuf=null;
-let curRoot=-7,curChord=[0,3,7,10],curScale="aeolian";
+//// ===================== AUDIO v7: melancholic dreamcore dub ===============
+let AC,master,revIn,delIn,bedSub=null,padFilt=null,bedOn=true,started=false,noiseBuf=null;
+const GK=window.GKEY||{root:-7,scale:"aeolian"};const GROOT=GK.root,GSCALE=GK.scale;
+let curRoot=GROOT,curChord=[0,3,7,10],curScale=GSCALE,curBright=.3,curReg=0;
 const SCALES={aeolian:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],locrian:[0,1,3,5,6,8,10],minor:[0,2,3,5,7,8,10]};
 function nbuf(){if(noiseBuf)return noiseBuf;const len=AC.sampleRate*2,b=AC.createBuffer(1,len,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return noiseBuf=b;}
 function impulse(sec,dec){const len=AC.sampleRate*sec,b=AC.createBuffer(2,len,AC.sampleRate);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,dec);}return b;}
@@ -178,15 +180,19 @@ function freq(root,st){return 110*Math.pow(2,(root+st)/12);}
 function audioStart(){if(started)return;started=true;AC=new(window.AudioContext||window.webkitAudioContext)();
  master=AC.createGain();master.gain.value=0.0;const tape=AC.createWaveShaper();tape.curve=softClip(.22);tape.oversample="2x";const comp=AC.createDynamicsCompressor();master.connect(tape);tape.connect(comp);comp.connect(AC.destination);
  const rev=AC.createConvolver();rev.buffer=impulse(5,2.2);revIn=AC.createGain();revIn.gain.value=.9;const ro=AC.createGain();ro.gain.value=.85;revIn.connect(rev);rev.connect(ro);ro.connect(master);
- // dub delay — long, dark, filtered feedback
- const dl=AC.createDelay(1.4);dl.delayTime.value=beat*0.75;const fb=AC.createGain();fb.gain.value=.7;const df=AC.createBiquadFilter();df.type="lowpass";df.frequency.value=900;delIn=AC.createGain();delIn.gain.value=.6;delIn.connect(dl);dl.connect(df);df.connect(fb);fb.connect(dl);dl.connect(master);dl.connect(revIn);
- const wow=AC.createOscillator();wow.frequency.value=.3;const wowAmt=AC.createGain();wowAmt.gain.value=.0009;wow.connect(wowAmt);wowAmt.connect(dl.delayTime);wow.start();
- // sustained sub drone — uniform, no rhythm
- bedSub=AC.createOscillator();bedSub.type="sine";const sg=AC.createGain();sg.gain.value=.17;bedSub.frequency.value=freq(curRoot,0)/2;bedSub.connect(sg);sg.connect(master);bedSub.start();
- // warm vinyl/tape dust (Jelinek bed) — lowpassed, not hissy
- {const src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=1600;const g=AC.createGain();g.gain.value=.018;src.connect(lp);lp.connect(g);g.connect(master);src.start();}
- microsound();schNext=AC.currentTime+.1;scheduler();
- master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+1.4);
+ // long dreamy dub delay (no tempo lock)
+ const dl=AC.createDelay(2);dl.delayTime.value=.55;const fb=AC.createGain();fb.gain.value=.6;const df=AC.createBiquadFilter();df.type="lowpass";df.frequency.value=800;delIn=AC.createGain();delIn.gain.value=.5;delIn.connect(dl);dl.connect(df);df.connect(fb);fb.connect(dl);dl.connect(master);dl.connect(revIn);
+ const wow=AC.createOscillator();wow.frequency.value=.18;const wowAmt=AC.createGain();wowAmt.gain.value=.0016;wow.connect(wowAmt);wowAmt.connect(dl.delayTime);wow.start();
+ // sub drone
+ bedSub=AC.createOscillator();bedSub.type="sine";const sg=AC.createGain();sg.gain.value=.13;bedSub.frequency.value=freq(curRoot,0)/2;bedSub.connect(sg);sg.connect(master);bedSub.start();
+ // soft dreamy pad drone (detuned triangles on root+5th+oct, washed) — the bed
+ padFilt=AC.createBiquadFilter();padFilt.type="lowpass";padFilt.frequency.value=freq(curRoot,0)*(2.5+curBright*4);padFilt.Q.value=.8;const pg=AC.createGain();pg.gain.value=.06;padFilt.connect(pg);pg.connect(master);pg.connect(revIn);
+ [0,7,12].forEach(st=>[-7,7].forEach(det=>{const o=AC.createOscillator();o.type="triangle";o.frequency.value=freq(curRoot,st);o.detune.value=det;const g=AC.createGain();g.gain.value=.5/3;o.connect(g);g.connect(padFilt);o.start();}));
+ const plfo=AC.createOscillator();plfo.frequency.value=.05;const plg=AC.createGain();plg.gain.value=120;plfo.connect(plg);plg.connect(padFilt.frequency);plfo.start();
+ // warm vinyl dust (soft Jelinek bed)
+ {const src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=1400;const g=AC.createGain();g.gain.value=.016;src.connect(lp);lp.connect(g);g.connect(master);src.start();}
+ microsound();ambientBloom();
+ master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+2.0);
 }
 function audioResume(){if(AC&&AC.state==="suspended")AC.resume();}
 // Jelinek/Pekler clicks'n'cuts — denser, warm, with pitched cuts
@@ -197,38 +203,36 @@ function cut(){if(!AC)return;const SC=SCALES[curScale]||SCALES.aeolian,t=AC.curr
 // THE dub-techno chord stab (minor, filter-wah, drenched)
 // one FM electric-piano (Rhodes) voice — soft bloom, mellow
 function rhodes(f,t,dur,gain,out){const car=AC.createOscillator();car.type="sine";car.frequency.value=f;const mod=AC.createOscillator();mod.type="sine";mod.frequency.value=f;const mi=AC.createGain();mi.gain.setValueAtTime(f*3,t);mi.gain.exponentialRampToValueAtTime(f*.4,t+.5);mod.connect(mi);mi.connect(car.frequency);const vg=AC.createGain();vg.gain.value=0;car.connect(vg);vg.connect(out);vg.gain.setValueAtTime(.0001,t);vg.gain.linearRampToValueAtTime(gain,t+.09);vg.gain.exponentialRampToValueAtTime(.0001,t+dur);car.start(t);mod.start(t);car.stop(t+dur+.1);mod.stop(t+dur+.1);}
-// --- Basic Channel / Rhythm & Sound dub core ---
+// --- melancholic dreamcore dub: soft pad bloom (sound comes mainly from the visual) ---
 function softClip(amt){const n=2048,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=Math.tanh(x*(1+amt*4));}return c;}
-// analog detuned-saw chord voice (R&S core): saws ±12c -> LP -> soft-clip; 12ms attack, short body
-function dabVoice(f,t,dur,gain,out,cut){const o1=AC.createOscillator(),o2=AC.createOscillator(),o3=AC.createOscillator();o1.type=o2.type=o3.type="sawtooth";[o1,o2,o3].forEach(o=>o.frequency.value=f);o2.detune.value=12;o3.detune.value=-12;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=cut||820;lp.Q.value=1.4;const sh=AC.createWaveShaper();sh.curve=softClip(.3);sh.oversample="2x";const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+.012);g.gain.exponentialRampToValueAtTime(gain*.5,t+.22);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o1.connect(lp);o2.connect(lp);o3.connect(lp);lp.connect(sh);sh.connect(g);g.connect(out);[o1,o2,o3].forEach(o=>{o.start(t);o.stop(t+dur+.05);});}
-// THE dub chord — detuned analog stab: ~40% dry body + 60% wet tail
-function dubChord(root,chord,o){if(!AC)return;o=o||{};const t=o.when||AC.currentTime,dur=o.dur||2.4,vel=o.vel==null?.5:o.vel,bright=o.bright==null?.4:o.bright;
- const out=AC.createGain();out.gain.value=1;
- const dry=AC.createGain();dry.gain.value=.4;out.connect(dry);dry.connect(master);
- if(revIn){const rs=AC.createGain();rs.gain.value=.55;out.connect(rs);rs.connect(revIn);}
- if(delIn){const ds=AC.createGain();ds.gain.value=.6;out.connect(ds);ds.connect(delIn);}
- chord.forEach(st=>dabVoice(freq(root,st+12),t,dur,vel*.5/chord.length,out,600+bright*350));}
-// --- pulse: lookahead scheduler, offbeat skank + sidechain breathing ---
-const BPM=120,beat=60/BPM;let schStep=0,schNext=0,schBar=0;
-function harmonyOffset(bar){const ph=bar%16;return ph<8?0:(ph<12?-2:0);} // hold tonic, dip -2 semitones, back
-function duckTick(t){if(!delIn)return;const d=delIn.gain;d.cancelScheduledValues(t);d.setValueAtTime(.32,t);d.linearRampToValueAtTime(.72,t+beat*.6);}
-function scheduler(){if(!AC)return;while(schNext<AC.currentTime+.12){if(bedOn){if(schStep%2===0)duckTick(schNext);if(schStep%2===1)dubChord(curRoot+harmonyOffset(schBar),curChord,{dur:2.4,vel:.5,bright:.35,when:schNext});}schNext+=beat/2;schStep++;if(schStep%8===0)schBar++;}setTimeout(scheduler,25);}
+// soft pad voice — detuned triangles, slow attack, long release, washed
+function padVoice(f,t,dur,gain,out){const o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const o2=AC.createOscillator();o2.type="triangle";o2.frequency.value=f;o2.detune.value=Math.random()*14-7;const g=AC.createGain();g.gain.value=0;o.connect(g);o2.connect(g);g.connect(out);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(gain,t+.4);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.start(t);o2.start(t);o.stop(t+dur+.1);o2.stop(t+dur+.1);}
+// a soft chord BLOOM in the ONE key. mood = chord colour + brightness + register (from the card)
+function dubChord(chord,o){if(!AC)return;o=o||{};const t=o.when||AC.currentTime,dur=o.dur||4.5,vel=o.vel==null?.4:o.vel,bright=o.bright==null?curBright:o.bright,reg=o.reg||0;
+ const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(curRoot,0)*(2+bright*5);lp.Q.value=.9;
+ const dry=AC.createGain();dry.gain.value=.3;lp.connect(dry);dry.connect(master);
+ if(revIn){const rs=AC.createGain();rs.gain.value=.85;lp.connect(rs);rs.connect(revIn);}
+ if(delIn){const ds=AC.createGain();ds.gain.value=.5;lp.connect(ds);ds.connect(delIn);}
+ chord.forEach(st=>padVoice(freq(curRoot,st+12+reg),t,dur,vel*.5/chord.length,lp));}
+// very sparse ambient chord movement (most sound is triggered by sonify/visual)
+function ambientBloom(){if(!AC)return;if(bedOn&&Math.random()<.6)dubChord(curChord,{vel:.28,dur:5+Math.random()*3});setTimeout(ambientBloom,7000+Math.random()*6000);}
+// MOOD, not key: crossfade pad brightness + set current chord colour. tonality never changes.
+function setMood(snd){if(!AC||!snd)return;curChord=snd.chord||curChord;curBright=snd.bright==null?curBright:snd.bright;curReg=snd.reg||0;if(padFilt)padFilt.frequency.setTargetAtTime(freq(curRoot,0)*(2.5+curBright*4),AC.currentTime,1.2);}
 // melancholic Floex/Dvorak motif
 function dvorak(snd){if(!AC)return;const SC=SCALES[snd.scale]||SCALES.aeolian,t0=AC.currentTime,n=2+(Math.random()*2|0);for(let i=0;i<n;i++){const dg=SC[(Math.random()*SC.length)|0],f=freq(snd.root,dg+12),tt=t0+i*.3,o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const o2=AC.createOscillator();o2.type="sine";o2.frequency.value=f*3;const og=AC.createGain();og.gain.value=.05;const g=AC.createGain();g.gain.value=0;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=f*2;bp.Q.value=4;o2.connect(og);og.connect(g);o.connect(g);g.connect(bp);bp.connect(master);if(revIn)bp.connect(revIn);if(delIn)bp.connect(delIn);g.gain.setValueAtTime(.0001,tt);g.gain.exponentialRampToValueAtTime(.13,tt+.06);g.gain.exponentialRampToValueAtTime(.0001,tt+.75);o.start(tt);o2.start(tt);o.stop(tt+.85);o2.stop(tt+.85);}}
 // glide bed key to a card (music changes per card)
-function setChord(chord,root,scale){if(!AC)return;curChord=chord;curRoot=root;if(scale)curScale=scale;if(bedSub)bedSub.frequency.setTargetAtTime(freq(root,0)/2,AC.currentTime,.4);}
 // interaction = sustained dub chord; drag = filter wah; hold keeps it
 function makeVoice(snd){return{active:false,snd,osc:null,g:null,filt:null,base:0};}
-function voiceOn(v,fx,fy){audioStart();audioResume();if(v.active)voiceOff(v);setChord(v.snd.chord,v.snd.root,v.snd.scale);const root=v.snd.root,chord=v.snd.chord,t=AC.currentTime,bright=1-(fy||.5);const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(root,0)*(2.5+bright*5);lp.Q.value=1.4;const sh=AC.createWaveShaper();sh.curve=softClip(.28);sh.oversample="2x";lp.connect(sh);const out=AC.createGain();out.gain.value=1;sh.connect(out);const dry=AC.createGain();dry.gain.value=.4;out.connect(dry);dry.connect(master);if(revIn){const rs=AC.createGain();rs.gain.value=.55;out.connect(rs);rs.connect(revIn);}if(delIn){const ds=AC.createGain();ds.gain.value=.6;out.connect(ds);ds.connect(delIn);}const g=AC.createGain();g.gain.value=0;g.connect(lp);const oscs=[];chord.forEach(st=>[0,12,-12].forEach(det=>{const o=AC.createOscillator();o.type="sawtooth";o.frequency.value=freq(root,st+12);o.detune.value=det;const og=AC.createGain();og.gain.value=.5/chord.length/3;o.connect(og);og.connect(g);o.start();oscs.push(o);}));g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.55,t+.012);g.gain.exponentialRampToValueAtTime(.36,t+.3);v.osc=oscs;v.g=g;v.filt=lp;v.active=true;v.base=freq(root,0);}
+function voiceOn(v,fx,fy){audioStart();audioResume();if(v.active)voiceOff(v);setMood(v.snd);const chord=v.snd.chord||curChord,reg=v.snd.reg||0,t=AC.currentTime,bright=1-(fy||.5);const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=freq(curRoot,0)*(2+bright*5);lp.Q.value=1;const dry=AC.createGain();dry.gain.value=.3;lp.connect(dry);dry.connect(master);if(revIn){const rs=AC.createGain();rs.gain.value=.85;lp.connect(rs);rs.connect(revIn);}if(delIn){const ds=AC.createGain();ds.gain.value=.5;lp.connect(ds);ds.connect(delIn);}const g=AC.createGain();g.gain.value=0;g.connect(lp);const oscs=[];chord.forEach(st=>[-7,7].forEach(det=>{const o=AC.createOscillator();o.type="triangle";o.frequency.value=freq(curRoot,st+12+reg);o.detune.value=det;const og=AC.createGain();og.gain.value=.5/chord.length/2;o.connect(og);og.connect(g);o.start();oscs.push(o);}));g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.5,t+.3);g.gain.exponentialRampToValueAtTime(.34,t+1.2);v.osc=oscs;v.g=g;v.filt=lp;v.active=true;v.base=freq(curRoot,0);}
 function voiceBend(v,fx,fy){if(!v.active||!AC)return;const bright=1-(fy||.5);v.filt.frequency.setTargetAtTime(v.base*(2+bright*9+(fx||0)*2),AC.currentTime,.05);}
 function voiceOff(v){if(!v.active||!AC)return;const t=AC.currentTime;v.g.gain.cancelScheduledValues(t);v.g.gain.setValueAtTime(Math.max(.0001,v.g.gain.value),t);v.g.gain.exponentialRampToValueAtTime(.0001,t+1.1);const o=v.osc;setTimeout(()=>o.forEach(x=>{try{x.stop();}catch(e){}}),1200);v.active=false;}
 // visual -> audio: card activity + discrete events drive dub stabs/grains in the card key (AUDIBLE)
-function sonify(card,t){if(!AC||!bedOn)return;const s=card.state;if(!s)return;const act=s.activity||.3,sp=card.spd||1,tone=card.tone==null?.5:card.tone;
- card._acc=(card._acc||0)+act*.05*sp;
- if(card._acc>=1){card._acc=0;dubChord(card.d.sound.root,card.d.sound.chord,{vel:.34+act*.4,bright:.25+act*.4+tone*.4,dur:1.1+Math.random()});}
- if(s.pulse){s.pulse=0;dubChord(card.d.sound.root,card.d.sound.chord,{vel:.5,bright:.55+tone*.3,dur:1.0});}
- if(Math.random()<act*.09)grain(.3+act*.3,200+Math.random()*1700*(0.4+tone),.02+Math.random()*.06,Math.random()<.5);
- if(Math.random()<.004)dvorak(card.d.sound);}
+// visual -> sound: the chord BLOOMS from what's happening on the canvas (slow, sparse, sad)
+function sonify(card,t){if(!AC||!bedOn)return;const s=card.state;if(!s)return;const sn=card.d.sound,act=s.activity||.3,sp=card.spd||1,tone=card.tone==null?.5:card.tone;
+ card._acc=(card._acc||0)+act*.02*sp;
+ if(card._acc>=1){card._acc=0;dubChord(sn.chord,{vel:.28+act*.3,bright:sn.bright+tone*.3,reg:sn.reg,dur:4+Math.random()*3});}
+ if(s.pulse){s.pulse=0;dubChord(sn.chord,{vel:.42,bright:sn.bright+.2,reg:sn.reg,dur:4});}
+ if(Math.random()<act*.05)grain(.22+act*.2,200+Math.random()*800,.03+Math.random()*.07,true);}
 // glitch -> short soft sweep + sparse clicks (reverted; gentle, no startle)
 function glitchNoise(){if(!AC)return;const t=AC.currentTime,src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.setValueAtTime(200,t);bp.frequency.exponentialRampToValueAtTime(5000,t+.5);bp.Q.value=2;const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.12,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.6);src.connect(bp);bp.connect(g);g.connect(master);g.connect(revIn);src.start(t);src.stop(t+.7);for(let i=0;i<8;i++)setTimeout(()=>grain(.4,300+Math.random()*4000,.01,false),i*40+Math.random()*30);}
 
@@ -240,6 +244,7 @@ function exportPNG(cv,id){const a=document.createElement("a");a.download=`limina
 function buildCard(d){const el=document.createElement("div");el.className="card hint";
  el.innerHTML=`<span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
   <div class="chead"><span class="id">${d.id}</span><span id="eng_${d.id}"></span></div>
+  <div class="emo">${d.emotion.title}</div>
   <div class="cv"><canvas></canvas><div class="hold">держи — раскроется</div></div>
   <div class="cfoot"><button data-a="focus">◰ FOCUS</button><button data-a="regen">⟳</button><button data-a="png">▣</button></div>`;
  const cv=el.querySelector("canvas"),wrap=el.querySelector(".cv");
@@ -250,17 +255,17 @@ function buildCard(d){const el=document.createElement("div");el.className="card 
  el.querySelector('[data-a="png"]').onclick=e=>{e.stopPropagation();exportPNG(cv,d.id);};
  el.querySelector('[data-a="focus"]').onclick=e=>{e.stopPropagation();openFocus(d);};
  const rel=ev=>{const r=wrap.getBoundingClientRect();return[(ev.clientX-r.left)/r.width,(ev.clientY-r.top)/r.height];};
- wrap.addEventListener("pointerdown",ev=>{const[x,y]=rel(ev);voiceOn(card.voice,x,y);setChord(d.sound.chord,d.sound.root,d.sound.scale);try{wrap.setPointerCapture(ev.pointerId);}catch(_){}card.holdTimer=setTimeout(()=>{card.reveal={txt:d.conf[(Math.random()*d.conf.length)|0],t0:performance.now()};},650);});
+ wrap.addEventListener("pointerdown",ev=>{const[x,y]=rel(ev);voiceOn(card.voice,x,y);setMood(d.sound);try{wrap.setPointerCapture(ev.pointerId);}catch(_){}card.holdTimer=setTimeout(()=>{card.reveal={txt:d.conf[(Math.random()*d.conf.length)|0],t0:performance.now()};},650);});
  wrap.addEventListener("pointermove",ev=>{if(card.voice.active){const[x,y]=rel(ev);voiceBend(card.voice,x,y);}});
  const up=()=>{voiceOff(card.voice);clearTimeout(card.holdTimer);};wrap.addEventListener("pointerup",up);wrap.addEventListener("pointercancel",up);wrap.addEventListener("pointerleave",up);
  return card;}
 // focus
 let ovd=null,ovS=null,ovFr=null,ovSeed=0,ovM=null,ovV=null,ovEng=null,ovSym=0,ovP=null,ovBf=null,ovBx=null,ovReveal=null,ovHold=null,ovSpd=1,ovDens=1,ovTone=.5;
-function openFocus(d){const card=cards.find(c=>c.d===d);ovd=d;ovSeed=card?card.seed:Math.abs(hash(d.id))%99999;ovV=makeVoice(d.sound);ovP=pal(d.emotion.mood);ovEng=card?card.eng:pickEngine(d,ovSeed);ovSym=(ovSeed>>4)%5;ovReveal=null;ovSpd=1;ovDens=1;ovTone=.5;["sl-motion","sl-dens","sl-tone"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=50;});document.getElementById("ov-id").textContent=d.id+" · "+ovEng.toUpperCase();document.getElementById("ov").classList.add("on");setChord(d.sound.chord,d.sound.root,d.sound.scale);ovFit();
+function openFocus(d){const card=cards.find(c=>c.d===d);ovd=d;ovSeed=card?card.seed:Math.abs(hash(d.id))%99999;ovV=makeVoice(d.sound);ovP=pal(d.emotion.mood);ovEng=card?card.eng:pickEngine(d,ovSeed);ovSym=(ovSeed>>4)%5;ovReveal=null;ovSpd=1;ovDens=1;ovTone=.5;["sl-motion","sl-dens","sl-tone"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=50;});document.getElementById("ov-id").textContent=d.id+" · "+d.emotion.title;document.getElementById("ov").classList.add("on");setMood(d.sound);ovFit();
  if(!firstOpen){firstOpen=true;toast("теперь открой другой объект — звук сменится");cards.forEach(c=>c.el.classList.remove("hint"));}}
 function ovFit(){const cv=document.getElementById("ov-cv");ovM=fit(cv);const dpr=Math.min(2,devicePixelRatio||1);ovBf=off(ovM.w*dpr,ovM.h*dpr);ovBx=ovBf.getContext("2d");ovBx.setTransform(dpr,0,0,dpr,0,0);ovS=R[ovEng].make(ovd,ovSeed,ovM.w,ovM.h,ovP,{dens:ovDens,tone:ovTone});ovFr=makeFrag(ovd,ovSeed);}
 document.getElementById("ov-close").onclick=()=>{if(ovV)voiceOff(ovV);document.getElementById("ov").classList.remove("on");ovd=null;};
-document.getElementById("ov-regen").onclick=()=>{ovSeed=(ovSeed*1103515245+12345)>>>0;ovEng=pickEngine(ovd,ovSeed);ovSym=(ovSeed>>4)%5;document.getElementById("ov-id").textContent=ovd.id+" · "+ovEng.toUpperCase();ovFit();};
+document.getElementById("ov-regen").onclick=()=>{ovSeed=(ovSeed*1103515245+12345)>>>0;ovEng=pickEngine(ovd,ovSeed);ovSym=(ovSeed>>4)%5;document.getElementById("ov-id").textContent=ovd.id+" · "+ovd.emotion.title;ovFit();};
 document.getElementById("ov-png").onclick=()=>exportPNG(document.getElementById("ov-cv"),ovd.id+"_focus");
 {const slM=document.getElementById("sl-motion"),slD=document.getElementById("sl-dens"),slT=document.getElementById("sl-tone");
  slM&&slM.addEventListener("input",e=>{ovSpd=.15+(e.target.value/100)*2.2;});
