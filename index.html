@@ -217,10 +217,8 @@ function sonify(card,t){if(!AC||!bedOn)return;const s=card.state;if(!s)return;co
  if(s.pulse){s.pulse=0;dubChord(card.d.sound.root,card.d.sound.chord,{vel:.5,bright:.55+tone*.3,dur:1.0});}
  if(Math.random()<act*.09)grain(.3+act*.3,200+Math.random()*1700*(0.4+tone),.02+Math.random()*.06,Math.random()<.5);
  if(Math.random()<.004)dvorak(card.d.sound);}
-// glitch -> memorable sustained drone-noise (Jelinek swell that hangs)
-function glitchNoise(){if(!AC)return;const t=AC.currentTime;const src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const flt=AC.createBiquadFilter();flt.type="lowpass";flt.frequency.setValueAtTime(4200,t);flt.frequency.exponentialRampToValueAtTime(180,t+2.2);flt.Q.value=9;const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.17,t+.05);g.gain.exponentialRampToValueAtTime(.0001,t+2.6);src.connect(flt);flt.connect(master);if(revIn)flt.connect(revIn);if(delIn)flt.connect(delIn);src.start(t);src.stop(t+2.8);
- const o=AC.createOscillator();o.type="sine";o.frequency.setValueAtTime(freq(curRoot,0),t);o.frequency.exponentialRampToValueAtTime(freq(curRoot,0)/3,t+2.4);const og=AC.createGain();og.gain.setValueAtTime(.0001,t);og.gain.linearRampToValueAtTime(.12,t+.1);og.gain.exponentialRampToValueAtTime(.0001,t+2.6);o.connect(og);og.connect(master);if(revIn)og.connect(revIn);o.start(t);o.stop(t+2.7);
- for(let i=0;i<10;i++)setTimeout(()=>grain(.5,300+Math.random()*4000,.012,false),i*45+Math.random()*40);}
+// glitch -> short soft sweep + sparse clicks (reverted; gentle, no startle)
+function glitchNoise(){if(!AC)return;const t=AC.currentTime,src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.setValueAtTime(200,t);bp.frequency.exponentialRampToValueAtTime(5000,t+.5);bp.Q.value=2;const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.12,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+.6);src.connect(bp);bp.connect(g);g.connect(master);g.connect(revIn);src.start(t);src.stop(t+.7);for(let i=0;i<8;i++)setTimeout(()=>grain(.4,300+Math.random()*4000,.01,false),i*40+Math.random()*30);}
 
 //// ===================== ENGINE WIRING =====================
 const cards=[];let firstOpen=false;
