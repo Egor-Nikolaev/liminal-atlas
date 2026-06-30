@@ -7,7 +7,8 @@
 <title>LIMINAL — слепок неосознанности</title>
 <style>
   :root{--bg:#080705;--panel:#100d09;--line:#3c2f1d;--line2:#241b11;--p:#ffb24a;--ink:#bda985;--ink-dim:#736141;--amber:#ffb24a;--ember:#ff7a2e;--parch:#ecd9ac;--teal:#3fb0a6;--mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;--z-ov:60;--z-glitch:80;--z-nudge:90;}
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .stage,.cv,#ov,canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);min-height:100dvh}
   body{background-image:radial-gradient(60% 45% at 50% -8%,rgba(255,150,60,.10),transparent 60%),radial-gradient(circle at 50% 122%,rgba(34,46,48,.28),transparent 60%),repeating-linear-gradient(0deg,rgba(255,170,80,.012) 0 1px,transparent 1px 3px)}
   .bar{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:max(10px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line);background:linear-gradient(#050809,#04070acc);backdrop-filter:blur(4px);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
@@ -337,7 +338,7 @@ const DUBN=5,DUBNAMES=["","сон","тьма","R&S","бездна","эфир"],b
 let moodDepth=0,moodFilter=null,subG=null,windGain=null,rainGain=null,fireGain=null,kickBus=null,percBus=null,percAmt=0,nextBeat=0,beatN=0,soundDens=.5;
 const BPM2=70,BEAT2=60/BPM2;
 let dlNode=null,motifPos=0,lastMotifTouch=0;
-let chordVoices=[],chordPadG=null,tablaAmt=0,kalimbaAmt=0,woodAmt=0,step16=0,nextStep16=0;
+let chordVoices=[],chordPadG=null,chordLP=null,tablaAmt=0,kalimbaAmt=0,woodAmt=0,step16=0,nextStep16=0;
 const MOTIFS=[[1,1,3,1],[1,2,1,4],[0,1,3,5],[1,3,1,2],[5,3,1,1],[1,1,1,1],[3,1,5,1],[1,4,2,0]]; // consonant minor progressions (indices into CONSONANT)
 let motifSeq=MOTIFS[1];
 const DELAYS=[.375,.5,.5625,.66,.75]; // dub delay divisions to rotate
@@ -347,7 +348,12 @@ function evolve(){if(!AC)return;
  if(dlNode)dlNode.delayTime.setTargetAtTime(DELAYS[(Math.random()*DELAYS.length)|0],AC.currentTime,1.5); // new delay feel
  if(toneFilter)toneFilter.frequency.setTargetAtTime(2000+Math.random()*9000,AC.currentTime,2.5);         // tone drift
  setTimeout(evolve,70000+Math.random()*60000);}              // every ~70-130s the music re-shapes itself
-function setDub(v,fade){audioVer=((v-1)%DUBN+DUBN)%DUBN+1;if(AC&&bedGains.length){const n=AC.currentTime,f=fade==null?2:fade;bedGains.forEach((g,i)=>g&&g.gain.linearRampToValueAtTime(i+1===audioVer?bedMax[i+1]:0,n+f));}const el=document.getElementById("audver");if(el)el.textContent="DUB·"+audioVer;}
+const PADTYPE=["","triangle","sawtooth","sawtooth","sawtooth","triangle"],PADCUT=[0,1500,640,980,520,2400];
+function setDub(v,fade){audioVer=((v-1)%DUBN+DUBN)%DUBN+1;if(AC&&bedGains.length){const n=AC.currentTime,f=fade==null?2:fade;bedGains.forEach((g,i)=>g&&g.gain.linearRampToValueAtTime(i+1===audioVer?bedMax[i+1]:0,n+f));
+  // also recolor the always-on chord pad so DUB·1..5 sound clearly different (timbre + filter)
+  chordVoices.forEach(vc=>{vc.o.type=PADTYPE[audioVer];vc.o2.type=PADTYPE[audioVer];});
+  if(chordLP)chordLP.frequency.setTargetAtTime(PADCUT[audioVer],n,.6);}
+ const el=document.getElementById("audver");if(el)el.textContent="DUB·"+audioVer;}
 const GK=window.GKEY||{root:-7,scale:"aeolian"};const GROOT=GK.root,GSCALE=GK.scale;
 let curRoot=GROOT,curChord=[0,3,7,10],curScale=GSCALE,curBright=.3,curReg=0;
 const SCALES={aeolian:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],locrian:[0,1,3,5,6,8,10],minor:[0,2,3,5,7,8,10]};
@@ -405,15 +411,20 @@ function audioStart(){if(started)return;started=true;AC=new(window.AudioContext|
 function applyMood(){if(!AC)return;if(moodFilter)moodFilter.frequency.setTargetAtTime(3200-moodDepth*2720,AC.currentTime,.3);if(subG)subG.gain.setTargetAtTime(.13+moodDepth*.12,AC.currentTime,.4);}
 // 70bpm rhythm engine
 // --- ETHNIC percussion (no drum kit) — each through the dub-echo percBus, each its own knob ---
-function tabla(t,amt){const o=AC.createOscillator();o.type="sine";const f0=176+Math.random()*44;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f0*.5,t+.09);const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.5*amt,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+.22);o.connect(g);g.connect(percBus);o.start(t);o.stop(t+.26);
+function tabla(t,amt){const o=AC.createOscillator();o.type="sine";const f0=(176+Math.random()*44)*Math.pow(2,curTune/12);o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f0*.5,t+.09);const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.5*amt,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+.22);o.connect(g);g.connect(percBus);o.start(t);o.stop(t+.26);
  const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=2200;bp.Q.value=4;const cg=AC.createGain();cg.gain.setValueAtTime(.0001,t);cg.gain.linearRampToValueAtTime(.16*amt,t+.001);cg.gain.exponentialRampToValueAtTime(.0001,t+.03);s.connect(bp);bp.connect(cg);cg.connect(percBus);s.start(t);s.stop(t+.05);}
 function kalimba(t,amt){const SC=curChord,dg=SC[(Math.random()*SC.length)|0],f=freq(curRoot,dg+24+(Math.random()<.3?12:0)),car=AC.createOscillator();car.type="sine";car.frequency.value=f;const mod=AC.createOscillator();mod.type="sine";mod.frequency.value=f*3.01;const mi=AC.createGain();mi.gain.setValueAtTime(f*1.6,t);mi.gain.exponentialRampToValueAtTime(f*.2,t+.18);mod.connect(mi);mi.connect(car.frequency);const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.32*amt,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+.5);car.connect(g);g.connect(percBus);car.start(t);mod.start(t);car.stop(t+.55);mod.stop(t+.55);}
-function wood(t,amt){const o=AC.createOscillator();o.type="triangle";o.frequency.setValueAtTime(900+Math.random()*220,t);o.frequency.exponentialRampToValueAtTime(600,t+.03);const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1400;bp.Q.value=2;const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.4*amt,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.06);o.connect(bp);bp.connect(g);g.connect(percBus);o.start(t);o.stop(t+.08);}
+function wood(t,amt){const o=AC.createOscillator();o.type="triangle";const wf=(900+Math.random()*220)*Math.pow(2,curTune/12);o.frequency.setValueAtTime(wf,t);o.frequency.exponentialRampToValueAtTime(wf*.66,t+.03);const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1400;bp.Q.value=2;const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.4*amt,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.06);o.connect(bp);bp.connect(g);g.connect(percBus);o.start(t);o.stop(t+.08);}
 function arpNote(t){const SC=curChord,dg=SC[(Math.random()*SC.length)|0],f=freq(curRoot,dg+12),o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=f*4;const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.12,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.5);o.connect(lp);lp.connect(g);g.connect(master);if(delIn)g.connect(delIn);if(revIn)g.connect(revIn);o.start(t);o.stop(t+.55);}
 // per-card 16-step rhythmic figure (each card sounds different)
-function patFor(seed){const r=rng((seed|0)^0x9e37),mk=(d,off)=>{const a=[];for(let i=0;i<16;i++)a.push(r()<d?1:0);if(off!=null)a[off%16]=1;return a;};return{tabla:mk(.18,0),kalimba:mk(.14,6),wood:mk(.22,4)};}
+function patFor(seed){const r=rng((seed|0)^0x9e37),mk=(dmin,dmax)=>{const d=dmin+r()*(dmax-dmin),a=[];for(let i=0;i<16;i++)a.push(r()<d?1:0);return a;};
+ const p={tabla:mk(.1,.34),kalimba:mk(.07,.24),wood:mk(.12,.32),tune:(r()*7|0)-3}; // each card: its own density, groove, and drum tuning (±3 st)
+ const anchor=["tabla","kalimba","wood"][(r()*3)|0];p[anchor][0]=1;p[anchor][(r()<.5?8:12)]=1; // a downbeat anchor varies per card
+ if(r()<.5)p.tabla[(r()*16)|0]=p.tabla[((r()*16)|0)]?0:1; // little syncopation
+ return p;}
+let curTune=0;
 let _patCache={};
-function currentPattern(){const id=(ovd&&ovd.id)||(lastBeatCard&&lastBeatCard.d&&lastBeatCard.d.id)||"AT-00";if(!_patCache[id])_patCache[id]=patFor(hash(id));return _patCache[id];}
+function currentPattern(){const id=(ovd&&ovd.id)||(lastBeatCard&&lastBeatCard.d&&lastBeatCard.d.id)||"AT-00";if(!_patCache[id])_patCache[id]=patFor(hash(id));const p=_patCache[id];curTune=p.tune||0;return p;}
 function startRhythm(){if(!AC)return;nextStep16=AC.currentTime+.15;step16=0;rhythmTick();}
 function rhythmTick(){if(!AC)return;const ahead=AC.currentTime+.2,STEP=BEAT2/4;while(nextStep16<ahead){const st=step16%16,pat=currentPattern();if(bedOn){
    if(pat.tabla[st]&&tablaAmt>.01)tabla(nextStep16,tablaAmt);
@@ -468,7 +479,7 @@ const CONSONANT=[[0,3,7],[0,3,7,10],[3,7,10],[5,8,12],[7,10,14],[8,12,15],[0,3,7
 function setMotif(v){curChord=CONSONANT[Math.max(0,Math.min(CONSONANT.length-1,Math.floor(v*CONSONANT.length)))];retuneChord(true);}
 function setMood(snd){if(!snd)return;curBright=snd.bright==null?curBright:snd.bright;curReg=snd.reg||0;if(AC&&padFilt)padFilt.frequency.setTargetAtTime(freq(curRoot,0)*(2.5+curBright*4),AC.currentTime,1.2);} // mood = timbre only; chord is owned by МОТИВ
 // CONTINUOUS chord pad that always sounds the current chord — so МОТИВ (and the auto progression) is clearly audible
-function buildChordPad(){const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=950;lp.Q.value=1.1;const sh=AC.createWaveShaper();sh.curve=softClip(.18);sh.oversample="2x";chordPadG=AC.createGain();chordPadG.gain.value=.0;lp.connect(sh);sh.connect(chordPadG);chordPadG.connect(master);if(revIn)chordPadG.connect(revIn);if(delIn)chordPadG.connect(delIn);
+function buildChordPad(){const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=950;lp.Q.value=1.1;chordLP=lp;const sh=AC.createWaveShaper();sh.curve=softClip(.18);sh.oversample="2x";chordPadG=AC.createGain();chordPadG.gain.value=.0;lp.connect(sh);sh.connect(chordPadG);chordPadG.connect(master);if(revIn)chordPadG.connect(revIn);if(delIn)chordPadG.connect(delIn);
  for(let i=0;i<5;i++){const o=AC.createOscillator();o.type="sawtooth";const o2=AC.createOscillator();o2.type="sawtooth";o2.detune.value=8;const g=AC.createGain();g.gain.value=0;o.connect(g);o2.connect(g);g.connect(lp);o.start();o2.start();chordVoices.push({o,o2,g});}
  const swell=AC.createOscillator();swell.type="sine";swell.frequency.value=.05;const swg=AC.createGain();swg.gain.value=520;swell.connect(swg);swg.connect(lp.frequency);swell.start();
  chordPadG.gain.linearRampToValueAtTime(.12,AC.currentTime+3);retuneChord(false);}
@@ -522,7 +533,9 @@ const BREATHW=TAU*0.1/1000; // ~6 breaths/min
 function breathe(t){return .5+.5*Math.sin(t*BREATHW);}
 function showChrome(){const ov=document.getElementById("ov");ov.classList.remove("dim");clearTimeout(chromeTimer);chromeTimer=setTimeout(()=>{if(ovd)ov.classList.add("dim");},3800);}
 function openFocus(d){const card=cards.find(c=>c.d===d);ovd=d;ovSeed=card?card.seed:Math.abs(hash(d.id))%99999;ovV=makeVoice(d.sound);ovP=pal(d.emotion.mood);ovEng=(card&&(card.eng||card.fixedEng))||d.viz||pickEngine(d,ovSeed);ovSym=(card&&card.fixedSym!=null?card.fixedSym:(ovSeed>>4)%5);ovReveal=null;ovZoom=.012;ovDeepen=0;ovLastAct=performance.now();galleryActive=false;document.getElementById("ov-id").textContent=d.id+" · "+d.emotion.title;const ov=document.getElementById("ov");ov.classList.add("on","tank");tankMode=true;setMood(d.sound);ovFit();showChrome();
- ovIdx=cards.indexOf(card);lastTankIdx=ovIdx;document.getElementById("cont").classList.add("show");clearInterval(ovAuto);ovAuto=setInterval(()=>{if(ovd&&!ovReveal)ovReveal={txt:makeConfession(ovd),t0:performance.now()};},15000);
+ ovIdx=cards.indexOf(card);lastTankIdx=ovIdx;document.getElementById("cont").classList.add("show");
+ ovReveal={txt:makeConfession(d),t0:performance.now()+450}; // FIRST confession surfaces right away, on every card
+ clearInterval(ovAuto);ovAuto=setInterval(()=>{if(ovd&&!ovReveal)ovReveal={txt:makeConfession(ovd),t0:performance.now()};},8000); // and more often
  if(!firstOpen){firstOpen=true;toast("тапай по полотну — оно глубже · ‹ › — другая · ESC — назад в галерею");cards.forEach(c=>c.el.classList.remove("hint"));}}
 function focusStep(dir){if(!ovd)return;const n=cards.length,i=((ovIdx+dir)%n+n)%n;openFocus(cards[i].d);}
 function ovFit(){const cv=document.getElementById("ov-cv");ovCvEl=cv;ovM=fit(cv);const dpr=Math.min(2,devicePixelRatio||1);ovBf=off(ovM.w*dpr,ovM.h*dpr);ovBx=ovBf.getContext("2d");ovBx.setTransform(dpr,0,0,dpr,0,0);ovFeed=off(cv.width,cv.height);ovFx=ovFeed.getContext("2d");ovFx.clearRect(0,0,ovFeed.width,ovFeed.height);ovS=R[ovEng].make(ovd,ovSeed,ovM.w,ovM.h,ovP,{dens:ovDens,tone:ovTone});ovFr=makeFrag(ovd,ovSeed);}
@@ -546,7 +559,8 @@ document.getElementById("ov-png").onclick=()=>exportPNG(document.getElementById(
  slKa&&slKa.addEventListener("input",e=>{kalimbaAmt=e.target.value/100;});
  slWo&&slWo.addEventListener("input",e=>{woodAmt=e.target.value/100;});}
 (function(){const st=document.querySelector("#ov .stage"),rel=e=>{const r=st.getBoundingClientRect();return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];};let lastSeed=0;
- st.addEventListener("pointerdown",e=>{if(!ovd)return;const[x,y]=rel(e),now=performance.now();ovLastAct=now;showChrome();ovDeepen+=.035;          // tap pushes deeper into the tunnel
+ st.addEventListener("touchstart",e=>{e.preventDefault();},{passive:false}); // kill iOS long-press selection/copy callout on the stage
+ st.addEventListener("pointerdown",e=>{if(!ovd)return;e.preventDefault();const[x,y]=rel(e),now=performance.now();ovLastAct=now;showChrome();ovDeepen+=.035;          // tap pushes deeper into the tunnel
    voiceOn(ovV,x,y);                                                   // sustained tone, bends while held
    dubChord(curChord,{vel:.55,bright:(ovd.sound.bright||.4)+.25,reg:ovd.sound.reg,dur:audioVer===1?3.5:6}); // dub hit (consonant chord from МОТИВ)
    if(ovS){mutateState(ovS,x,y,ovM.w,ovM.h);ovS.pulse=1;ovS.excite=1;} // mutate THIS engine locally under the finger — never switches engine
@@ -609,7 +623,7 @@ cards.forEach(c=>io.observe(c.el));
 addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{cards.forEach(c=>{if(c.state)c.rebuild();});if(ovd)ovFit();},220);});
 document.getElementById("regenAll").onclick=()=>cards.forEach(c=>{c.seed=(c.seed*1103515245+12345)>>>0;if(!c.d.viz){c.fixedEng=null;c.fixedSym=null;}if(c.state)c.rebuild();});
 document.getElementById("sound").onclick=e=>{audioStart();audioResume();bedOn=!bedOn;if(AC)master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+.5);e.target.textContent=bedOn?"♪ ЗВУК":"♪ ТИХО";e.target.classList.toggle("on",bedOn);};
-document.getElementById("audver").onclick=e=>{audioStart();audioResume();setDub(audioVer%DUBN+1);toast("тон: "+DUBNAMES[audioVer]);};
+document.getElementById("audver").onclick=e=>{audioStart();audioResume();setDub(audioVer%DUBN+1,1.3);toast("DUB·"+audioVer+" — "+DUBNAMES[audioVer]);};
 document.getElementById("cont").onclick=()=>{if(lastTankIdx!=null&&cards[lastTankIdx])openFocus(cards[lastTankIdx].d,true);};
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("on");clearTimeout(window._tt);window._tt=setTimeout(()=>el.classList.remove("on"),3400);}
 // psychedelic intro -> vortex -> emerge into the first tank
