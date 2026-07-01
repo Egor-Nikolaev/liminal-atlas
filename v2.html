@@ -122,6 +122,7 @@
   <div id="candle"></div>
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
+    <span class="stat" style="color:#ff7a2e">v2.7</span>
     <span class="spacer"></span>
     <span class="chip" id="cont" title="вернуться в последний бак">⟲ ПРОДОЛЖИТЬ</span>
     <span class="chip on" id="audver" title="музыкальный тон">DUB·3</span>
@@ -334,15 +335,17 @@ function wrap(s,n){const wds=s.split(" "),L=[];let cur="";for(const wd of wds){i
 let AC,master,revIn,delIn,bedSub=null,padFilt=null,bedOn=true,started=false,noiseBuf=null;
 let audioVer=3,bedV1Gain=null,bedV2Gain=null,bedV3Gain=null,bedV4Gain=null,bedV5Gain=null,toneFilter=null;  // tones: 1 dreamcore · 2 Paul St.Hilaire · 3 Rhythm&Sound(default) · 4 deep abyss · 5 ether shimmer
 const DUBN=5,DUBNAMES=["","дождь","глубь","R&S","туман","свет"],bedMax=[0,.4,.42,.4,.46,.3];let bedGains=[];
-let padDry=null,padRev=null,padDel=null;
+let padDry=null,padRev=null,padDel=null,padGate=null;
 // 5 melancholic Japanese-ambient dub-techno presets — DUB switches the whole character of the chord voice
+// each DUB is a DRAMATICALLY different melancholic patch: register (octave), filter openness, and rhythm (pulse) — not just a subtle timbre shift
 const DUBS=[null,
- {wave:"sine",    det:5, cut:1050,q:.7, rev:1.6,del:.55,dl:.5,  sub:.09,gain:.36}, // 1 дождь — soft Japanese ambient pad
- {wave:"sawtooth",det:6, cut:470, q:2.4,rev:1.0,del:.62,dl:.66, sub:.16,gain:.30}, // 2 глубь — deep dark dub
- {wave:"sawtooth",det:12,cut:760, q:1.4,rev:.95,del:.7, dl:.375,sub:.11,gain:.33}, // 3 R&S — detuned-saw, dotted delay
- {wave:"triangle",det:9, cut:820, q:1,  rev:1.7,del:.55,dl:.5,  sub:.12,gain:.33}, // 4 туман — foggy, washed
- {wave:"triangle",det:4, cut:2300,q:.6, rev:1.5,del:.5, dl:.42, sub:.06,gain:.28}, // 5 свет — shimmering ether
+ {wave:"sine",    det:5, reg:0,  cut:1600,q:.6, rev:1.7,del:.5, dl:.5,  sub:.08,gain:.34,pulse:0}, // 1 дождь — soft airy high ambient (Yoshimura)
+ {wave:"triangle",det:7, reg:-12,cut:360, q:1.6,rev:1.0,del:.6, dl:.66, sub:.18,gain:.34,pulse:0}, // 2 глубь — deep dark LOW drone
+ {wave:"sawtooth",det:13,reg:0,  cut:1150,q:1.2,rev:.85,del:.72,dl:.375,sub:.10,gain:.34,pulse:1}, // 3 R&S — OFFBEAT detuned-saw STAB + dotted delay
+ {wave:"triangle",det:10,reg:0,  cut:620, q:1.2,rev:1.9,del:.55,dl:.5,  sub:.12,gain:.33,pulse:0}, // 4 туман — foggy, washed, wide
+ {wave:"sine",    det:4, reg:12, cut:3200,q:.5, rev:1.6,del:.5, dl:.42, sub:.05,gain:.28,pulse:0}, // 5 свет — HIGH glassy shimmer
 ];
+let padReg=0,padPulse=0;
 function applyDub(n){if(!AC)return;const P=DUBS[n]||DUBS[3],t=AC.currentTime;
  chordVoices.forEach(v=>{v.o.type=P.wave;v.o2.type=P.wave;v.o2.detune.setTargetAtTime(P.det,t,.3);});
  if(chordLP){chordLP.frequency.setTargetAtTime(P.cut,t,.5);chordLP.Q.setTargetAtTime(P.q,t,.5);}
@@ -350,7 +353,10 @@ function applyDub(n){if(!AC)return;const P=DUBS[n]||DUBS[3],t=AC.currentTime;
  if(padDel)padDel.gain.setTargetAtTime(P.del,t,.7);
  if(dlNode)dlNode.delayTime.setTargetAtTime(P.dl,t,1.4);
  if(subG)subG.gain.setTargetAtTime(P.sub,t,.9);
- if(chordPadG)chordPadG.gain.setTargetAtTime(P.gain,t,1.0);}
+ if(chordPadG)chordPadG.gain.setTargetAtTime(P.gain,t,1.0);
+ padReg=P.reg;padPulse=P.pulse;retuneChord(true);                      // register shift (octave up/down) = big audible difference
+ if(padGate&&!padPulse)padGate.gain.setTargetAtTime(1,t,.4);           // drone DUBs: gate open; pulse DUB: scheduler chops it
+ if(padGate&&padPulse)padGate.gain.setTargetAtTime(.06,t,.2);}
 // mood (МОТИВ), textures (ТОН), percussion+70bpm kick
 let moodDepth=0,moodFilter=null,subG=null,windGain=null,rainGain=null,fireGain=null,kickBus=null,percBus=null,percAmt=0,nextBeat=0,beatN=0,soundDens=.5;
 const BPM2=70,BEAT2=60/BPM2;
@@ -443,7 +449,8 @@ function rhythmTick(){if(!AC)return;const ahead=AC.currentTime+.2,STEP=BEAT2/4;w
    if(pat.kalimba[st]&&kalimbaAmt>.01)kalimba(nextStep16,kalimbaAmt);
    if(pat.wood[st]&&woodAmt>.01)wood(nextStep16,woodAmt);
    if(soundDens>.4&&st%2===0&&Math.random()<soundDens*.7)arpNote(nextStep16); // ПЛОТНОСТЬ adds chord notes on the right
-   if(fireGain&&fireGain.gain.value>.01&&Math.random()<.25)grain(.5*fireGain.gain.value*8,90+Math.random()*260,.02+Math.random()*.04,true);}
+   if(fireGain&&fireGain.gain.value>.01&&Math.random()<.25)grain(.5*fireGain.gain.value*8,90+Math.random()*260,.02+Math.random()*.04,true);
+   if(padPulse&&padGate&&(st%4===2)){const g=padGate.gain;g.cancelScheduledValues(nextStep16);g.setValueAtTime(1,nextStep16);g.exponentialRampToValueAtTime(.05,nextStep16+.55);}} // R&S offbeat chord stab (skank)
   nextStep16+=STEP;step16++;}setTimeout(rhythmTick,40);}
 function audioResume(){if(AC&&AC.state==="suspended")AC.resume();}
 // Jelinek/Pekler clicks'n'cuts — denser, warm, with pitched cuts
@@ -493,13 +500,14 @@ function setMotif(v){curChord=CONSONANT[Math.max(0,Math.min(CONSONANT.length-1,M
 function setMood(snd){if(!snd)return;curBright=snd.bright==null?curBright:snd.bright;curReg=snd.reg||0;if(AC&&padFilt)padFilt.frequency.setTargetAtTime(freq(curRoot,0)*(2.5+curBright*4),AC.currentTime,1.2);} // mood = timbre only; chord is owned by МОТИВ
 // CONTINUOUS chord pad that always sounds the current chord — so МОТИВ (and the auto progression) is clearly audible
 function buildChordPad(){chordLP=AC.createBiquadFilter();chordLP.type="lowpass";chordLP.frequency.value=900;chordLP.Q.value=1.1;const sh=AC.createWaveShaper();sh.curve=softClip(.16);sh.oversample="2x";chordPadG=AC.createGain();chordPadG.gain.value=0;chordLP.connect(sh);sh.connect(chordPadG);
- padDry=AC.createGain();padDry.gain.value=.6;chordPadG.connect(padDry);padDry.connect(master);                 // the pad is now the MAIN voice (loud) so МОТИВ & DUB are clearly heard
- padRev=AC.createGain();padRev.gain.value=1.3;if(revIn){chordPadG.connect(padRev);padRev.connect(revIn);}
- padDel=AC.createGain();padDel.gain.value=.5;if(delIn){chordPadG.connect(padDel);padDel.connect(delIn);}
+ padGate=AC.createGain();padGate.gain.value=1;chordPadG.connect(padGate);                                       // gate — chopped on offbeats for the R&S pulse DUB, open for drone DUBs
+ padDry=AC.createGain();padDry.gain.value=.6;padGate.connect(padDry);padDry.connect(master);                    // the pad is now the MAIN voice (loud) so МОТИВ & DUB are clearly heard
+ padRev=AC.createGain();padRev.gain.value=1.3;if(revIn){padGate.connect(padRev);padRev.connect(revIn);}
+ padDel=AC.createGain();padDel.gain.value=.5;if(delIn){padGate.connect(padDel);padDel.connect(delIn);}
  for(let i=0;i<5;i++){const o=AC.createOscillator();o.type="triangle";const o2=AC.createOscillator();o2.type="triangle";o2.detune.value=7;const g=AC.createGain();g.gain.value=0;o.connect(g);o2.connect(g);g.connect(chordLP);o.start();o2.start();chordVoices.push({o,o2,g});}
  const swell=AC.createOscillator();swell.type="sine";swell.frequency.value=.045;const swg=AC.createGain();swg.gain.value=240;swell.connect(swg);swg.connect(chordLP.frequency);swell.start();
  chordPadG.gain.linearRampToValueAtTime(.34,AC.currentTime+3.5);applyDub(audioVer);retuneChord(false);}
-function retuneChord(glide){if(!AC||!chordVoices.length)return;const ch=curChord,t=AC.currentTime,tc=glide?.7:.04;for(let i=0;i<chordVoices.length;i++){const v=chordVoices[i];if(i<ch.length){const f=freq(curRoot,ch[i]+12);v.o.frequency.setTargetAtTime(f,t,tc);v.o2.frequency.setTargetAtTime(f,t,tc);v.g.gain.setTargetAtTime(.5/ch.length*(.7+soundDens*.3),t,.4);}else v.g.gain.setTargetAtTime(0,t,.4);}}
+function retuneChord(glide){if(!AC||!chordVoices.length)return;const ch=curChord,t=AC.currentTime,tc=glide?.7:.04;for(let i=0;i<chordVoices.length;i++){const v=chordVoices[i];if(i<ch.length){const f=freq(curRoot,ch[i]+12+padReg);v.o.frequency.setTargetAtTime(f,t,tc);v.o2.frequency.setTargetAtTime(f,t,tc);v.g.gain.setTargetAtTime(.5/ch.length*(.7+soundDens*.3),t,.4);}else v.g.gain.setTargetAtTime(0,t,.4);}}
 // melancholic Floex/Dvorak motif
 function dvorak(snd){if(!AC)return;const SC=SCALES[snd.scale]||SCALES.aeolian,t0=AC.currentTime,n=2+(Math.random()*2|0);for(let i=0;i<n;i++){const dg=SC[(Math.random()*SC.length)|0],f=freq(snd.root,dg+12),tt=t0+i*.3,o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const o2=AC.createOscillator();o2.type="sine";o2.frequency.value=f*3;const og=AC.createGain();og.gain.value=.05;const g=AC.createGain();g.gain.value=0;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=f*2;bp.Q.value=4;o2.connect(og);og.connect(g);o.connect(g);g.connect(bp);bp.connect(master);if(revIn)bp.connect(revIn);if(delIn)bp.connect(delIn);g.gain.setValueAtTime(.0001,tt);g.gain.exponentialRampToValueAtTime(.13,tt+.06);g.gain.exponentialRampToValueAtTime(.0001,tt+.75);o.start(tt);o2.start(tt);o.stop(tt+.85);o2.stop(tt+.85);}}
 // glide bed key to a card (music changes per card)
