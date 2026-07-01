@@ -122,10 +122,10 @@
   <div id="candle"></div>
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
-    <span class="stat" style="color:#ff7a2e">v2.8</span>
+    <span class="stat" style="color:#ff7a2e">v3.0</span>
     <span class="spacer"></span>
     <span class="chip" id="cont" title="вернуться в последний бак">⟲ ПРОДОЛЖИТЬ</span>
-    <span class="chip on" id="audver" title="музыкальный тон">DUB·3</span>
+    <span class="chip on" id="audver" title="эмбиент-слой">◍ тень</span>
     <span class="chip" id="regenAll">⟳ REGEN</span>
     <span class="chip on" id="sound">♪ ЗВУК</span>
   </div>
@@ -283,6 +283,50 @@ R.memo_car={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,c
  c.restore();
  c.strokeStyle=P.a+"33";c.lineWidth=1;for(let i=0;i<6;i++){const y=cy+u*.5+ (i-3)*3, xx=((sx+i*40)%(w))*-1+w;c.beginPath();c.moveTo(xx,y);c.lineTo(xx-30,y);c.stroke();}
  c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.35;}};
+// ---- FIGURATIVE cards: a literal drawn symbol of the state (like the memory cards, but for the dark ones) ----
+R.fig_void={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.48,S=Math.min(w,h),u=S*.12,br=Math.min(1,.5+.18*Math.sin(t*.001)+ex*.3);c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.beginPath();c.arc(0,-u*1.9,u*.5,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*1.4);c.lineTo(0,u*1.1);c.stroke();
+ c.beginPath();c.moveTo(0,-u*.7);c.lineTo(-u*.95,u*.05);c.moveTo(0,-u*.7);c.lineTo(u*.95,u*.05);c.stroke();
+ c.beginPath();c.moveTo(0,u*1.1);c.lineTo(-u*.6,u*2.2);c.moveTo(0,u*1.1);c.lineTo(u*.6,u*2.2);c.stroke();
+ c.shadowBlur=0;const hr=u*(.5+ex*.15),hy=-u*.35,g=c.createRadialGradient(0,hy,0,0,hy,hr*2.4);g.addColorStop(0,"#000");g.addColorStop(.55,"#000");g.addColorStop(1,"transparent");c.fillStyle=g;c.beginPath();c.arc(0,hy,hr*2.4,0,TAU);c.fill();c.fillStyle="#000";c.beginPath();c.arc(0,hy,hr,0,TAU);c.fill();
+ c.globalAlpha=br;c.fillStyle=P.b;c.shadowBlur=6;c.shadowColor=P.b;for(let i=0;i<26;i++){const a=i*.62-t*.0011,rr=hr*(1.3+(((i*11-t*.02)%70)+70)%70/70*2.6),x=Math.cos(a)*rr,y=hy+Math.sin(a)*rr*.9;c.fillRect(x,y,1.5,1.5);}
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.35;}};
+R.fig_reach={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.5,S=Math.min(w,h),u=S*.1,br=Math.min(1,.5+.2*Math.sin(t*.0008)+ex*.3),lean=Math.sin(t*.0009)*u*.1;c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.save();c.translate(-u*1.4,0);c.beginPath();c.arc(0,-u*1.6,u*.45,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*1.15);c.lineTo(u*.2,u*1.1);c.stroke();c.beginPath();c.moveTo(0,-u*.6);c.quadraticCurveTo(u*1.3,-u*.5-lean,u*2.0+ex*u,-u*.2);c.stroke();c.restore();
+ c.save();c.translate(u*1.9+lean,0);c.beginPath();c.arc(0,-u*1.6,u*.45,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*1.15);c.lineTo(-u*.25,u*1.1);c.stroke();c.beginPath();c.moveTo(0,-u*.6);c.lineTo(u*.7,u*.1);c.stroke();c.beginPath();c.moveTo(-u*.25,u*1.1);c.lineTo(-u*.7,u*2.1);c.moveTo(-u*.25,u*1.1);c.lineTo(u*.1,u*2.1);c.stroke();c.restore();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
+R.fig_joint={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.56,S=Math.min(w,h),u=S*.12,br=Math.min(1,.55+.2*Math.sin(t*.001)+ex*.3);c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.beginPath();c.moveTo(-u*1.4,u*1.4);c.quadraticCurveTo(-u*1.1,u*.2,-u*.2,u*.1);c.stroke();
+ c.beginPath();c.moveTo(-u*.2,u*.1);c.lineTo(u*.8,-u*.5);c.moveTo(-u*.15,u*.35);c.lineTo(u*.75,-u*.2);c.stroke();
+ c.beginPath();c.moveTo(u*.5,-u*.35);c.lineTo(u*1.5,-u*.95);c.stroke();
+ c.shadowBlur=14;c.shadowColor=P.b;c.fillStyle=P.b;c.beginPath();c.arc(u*1.55,-u*1.0,u*.09+ex*u*.05,0,TAU);c.fill();c.shadowBlur=0;
+ c.globalAlpha=br*.7;c.strokeStyle=P.a+"66";c.lineWidth=1.4;c.beginPath();for(let i=0;i<40;i++){const p=i/40,y=-u*1.05-p*u*3.2,x=u*1.55+Math.sin(p*8+t*.002)*u*.5*(1-p*.3);i?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
+R.fig_groundhog={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.6,S=Math.min(w,h),u=S*.12,br=Math.min(1,.5+.18*Math.sin(t*.0009)+ex*.3);c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.beginPath();c.moveTo(-u*2.2,u*.9);c.lineTo(u*2.2,u*.9);c.stroke();
+ c.beginPath();c.moveTo(-u*1.8,u*.9);c.quadraticCurveTo(-u*.5,u*.1,u*.6,u*.5);c.quadraticCurveTo(u*1.4,u*.8,u*1.8,u*.9);c.stroke();
+ c.beginPath();c.arc(-u*1.9,u*.55,u*.35,0,TAU);c.stroke();
+ c.save();c.translate(0,-u*1.7);c.beginPath();c.arc(0,0,u*.9,0,TAU);c.stroke();const a=t*.0016;c.beginPath();c.moveTo(0,0);c.lineTo(Math.cos(a)*u*.7,Math.sin(a)*u*.7);c.moveTo(0,0);c.lineTo(Math.cos(a*.5)*u*.5,Math.sin(a*.5)*u*.5);c.stroke();c.strokeStyle=P.b+"66";c.beginPath();c.arc(0,0,u*1.25,-.4,TAU-.7);c.stroke();c.restore();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
+R.fig_mask={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.5,S=Math.min(w,h),u=S*.14,br=Math.min(1,.5+.2*Math.sin(t*.0008)+ex*.3),sh=Math.sin(t*.0011)*u*.12+ex*u*.2;c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.save();c.globalAlpha=br*.4;c.translate(sh,0);c.beginPath();c.ellipse(0,0,u*.85,u*1.1,0,0,TAU);c.stroke();c.beginPath();c.arc(-u*.3,-u*.2,u*.08,0,TAU);c.moveTo(u*.38,-u*.2);c.arc(u*.3,-u*.2,u*.08,0,TAU);c.stroke();c.beginPath();c.arc(0,u*.55,u*.3,.25,Math.PI-.25);c.stroke();c.restore();
+ c.beginPath();c.ellipse(0,0,u*.9,u*1.15,0,0,TAU);c.stroke();c.beginPath();c.moveTo(-u*.55,-u*.25);c.lineTo(-u*.1,-u*.25);c.moveTo(u*.1,-u*.25);c.lineTo(u*.55,-u*.25);c.stroke();c.beginPath();c.moveTo(-u*.35,u*.45);c.lineTo(u*.35,u*.45);c.stroke();
+ c.beginPath();c.moveTo(u*.72,u*.9);c.lineTo(u*1.1,u*1.9);c.stroke();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
+R.fig_debt={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.55,S=Math.min(w,h),u=S*.12,br=Math.min(1,.5+.18*Math.sin(t*.001)+ex*.3),press=Math.abs(Math.sin(t*.0012))*u*.2+ex*u*.2;c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.save();c.translate(0,-u*1.2+press);c.beginPath();c.moveTo(-u*2,0);c.lineTo(0,-u*1.1);c.lineTo(u*2,0);c.closePath();c.stroke();c.beginPath();c.moveTo(-u*1.5,0);c.lineTo(-u*1.5,u*.5);c.lineTo(u*1.5,u*.5);c.lineTo(u*1.5,0);c.stroke();c.restore();
+ c.strokeStyle=P.b+"66";[-u,0,u].forEach(x=>{c.beginPath();c.moveTo(x,-u*.55+press);c.lineTo(x,-u*.15+press);c.lineTo(x-u*.12,-u*.3+press);c.moveTo(x,-u*.15+press);c.lineTo(x+u*.12,-u*.3+press);c.stroke();});
+ memSet(c,P,br);c.beginPath();c.arc(0,u*.7,u*.4,0,TAU);c.stroke();c.beginPath();c.moveTo(0,u*1.1);c.lineTo(0,u*1.8);c.stroke();c.beginPath();c.moveTo(0,u*1.3);c.lineTo(-u*.6,u*.7+press);c.moveTo(0,u*1.3);c.lineTo(u*.6,u*.7+press);c.stroke();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
+R.fig_dissolve={make(d,s){const r=rng(s||1),PS=[];for(let i=0;i<80;i++)PS.push({a:r()*TAU,sp:.2+r()*.7,ph:r()*100});return{PS,r};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.5,S=Math.min(w,h),u=S*.12,br=Math.min(1,.45+.2*Math.sin(t*.0008)+ex*.3);c.save();c.translate(cx,cy);memSet(c,P,br);
+ c.globalAlpha=br*.6;c.beginPath();c.arc(0,-u*1.6,u*.45,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*1.15);c.lineTo(0,-u*.2);c.stroke();c.globalAlpha=1;
+ c.shadowBlur=6;c.shadowColor=P.a;c.fillStyle=P.a;const span=S*.6;for(const p of s.PS){const drift=((t*.02*p.sp+p.ph*7)%span),fade=1-drift/span,y=-u*.2+drift,x=Math.sin(p.a+t*.0006)*u*(.8+drift*.005);if(fade>0){c.globalAlpha=br*fade*.85;c.fillRect(x,y,1.6,1.6);}}
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.4;}};
+R.fig_stranger={make(){return{};},frame(c,w,h,t,s,P){const ex=(s.excite||0),cx=w/2,cy=h*.5,S=Math.min(w,h),u=S*.1,br=Math.min(1,.5+.2*Math.sin(t*.0009)+ex*.3),off=Math.sin(t*.0008)*u*.3+ex*u*.4;c.save();c.translate(cx,cy);
+ c.strokeStyle=P.b+"44";c.lineWidth=1;c.beginPath();c.moveTo(0,-h*.4);c.lineTo(0,h*.4);c.stroke();memSet(c,P,br);
+ c.save();c.translate(-u*1.2,0);c.beginPath();c.arc(0,-u*1.5,u*.45,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*1.05);c.lineTo(0,u*1.1);c.stroke();c.beginPath();c.moveTo(0,-u*.5);c.lineTo(-u*.7,u*.1);c.moveTo(0,-u*.5);c.lineTo(u*.7,u*.1);c.stroke();c.restore();
+ c.save();c.translate(u*1.2,0);c.globalAlpha=br*.5;c.beginPath();c.arc(0,-u*1.5+off,u*.45,0,TAU);c.stroke();c.beginPath();c.moveTo(0,-u*1.05+off);c.lineTo(u*.15,u*1.1);c.stroke();c.beginPath();c.moveTo(0,-u*.5+off);c.lineTo(u*.8,-u*.1);c.moveTo(0,-u*.5+off);c.lineTo(-u*.5,u*.35);c.stroke();c.restore();
+ c.restore();c.globalAlpha=1;c.shadowBlur=0;memDust(c,w,h,t,P);s.activity=.3;}};
 function hex(h){h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
 
 const POOL=Object.keys(R).filter(k=>k!=='make');
@@ -306,14 +350,8 @@ const LEAD=["иногда","в последнее время","чаще всег
 function cap(s){return s?s[0].toUpperCase()+s.slice(1):s;}
 function pick(a){return a[(Math.random()*a.length)|0];}
 const seenConf=new Set();
-function makeConfession(d){const F=d.frags,C=d.conf;for(let i=0;i<8;i++){let s;const r=Math.random();
-  if(r<.22)s=pick(C);
-  else if(r<.46)s=cap(pick(F))+", "+pick(CONJ)+" "+pick(F)+" — "+pick(TAILS);
-  else if(r<.66)s=cap(pick(LEAD))+" "+pick(F)+", "+pick(CONJ)+" "+pick(F);
-  else if(r<.83)s=cap(pick(F))+". "+cap(pick(F))+". "+cap(pick(TAILS))+".";
-  else s=pick(C).replace(/\.$/,"")+" — "+pick(TAILS);
-  if(!seenConf.has(s)){seenConf.add(s);if(seenConf.size>500)seenConf.clear();return s;}}
- return pick(C);}
+// confessions are now the user's REAL lines — shown in order (the primary line first), then cycled
+function makeConfession(d){const L=(d.lines&&d.lines.length)?d.lines:(d.conf||[]);if(!L.length)return d.emotion.title;d._li=(d._li==null)?0:(d._li+1)%L.length;return L[d._li];}
 function makeFrag(d,seed){const r=rng(seed^0x51ed),pool=[...d.frags,...d.frags,...(d.labels||[])].filter(Boolean),isVoid=d.emotion.k==="void";
  const sp=()=>{const side=(r()*4)|0;let x=r(),y=r();if(side===0)y=-.05;else if(side===1)y=1.05;else if(side===2)x=-.05;else x=1.05;return{txt:pool.length?pool[(r()*pool.length)|0]:"…",x,y,born:-r()*4000,life:4500+r()*5000,sharp:.55+r()*.5,emo:r()<.62,clar:r()<.18,col:r()<.4};};
  const F=[];for(let i=0;i<8;i++)F.push(sp());return{F,sp,r,isVoid};}
@@ -327,23 +365,24 @@ function revealLayer(c,w,h,t,rev,P){if(!rev)return false;const age=(t-rev.t0)/10
  const total=lines.reduce((a,l)=>a+l.length,0)||1,shown=Math.floor(Math.min(1,age/1.9)*total); // type-on, readable
  c.globalAlpha=al*.92;c.fillStyle="#010302";c.fillRect(0,y0-lh*1.1,w,lines.length*lh+lh*.9);c.globalAlpha=1;
  c.strokeStyle=P.a+hx(al*.5);c.lineWidth=1;c.beginPath();c.moveTo(w*.12,y0-lh*.66);c.lineTo(w*.88,y0-lh*.66);c.stroke();
- let acc=0;lines.forEach((ln,i)=>{let vis=ln;if(acc+ln.length>shown)vis=ln.slice(0,Math.max(0,shown-acc));acc+=ln.length;if(!vis)return;const cc=corrupt(vis,Math.max(0,.16-age*.08)),y=y0+i*lh;c.fillStyle="#ff3b3b"+hx(al*.3);c.fillText(cc,w/2+2,y);c.fillStyle="#33ffd0"+hx(al*.3);c.fillText(cc,w/2-2,y);c.shadowBlur=12;c.shadowColor=P.a;c.fillStyle="#eafff0"+hx(al);c.fillText(cc,w/2,y);c.shadowBlur=0;});
+ let acc=0;lines.forEach((ln,i)=>{let vis=ln;if(acc+ln.length>shown)vis=ln.slice(0,Math.max(0,shown-acc));acc+=ln.length;if(!vis)return;const cc=vis,y=y0+i*lh;c.fillStyle="#ff3b3b"+hx(al*.22);c.fillText(cc,w/2+1.5,y);c.fillStyle="#33ffd0"+hx(al*.22);c.fillText(cc,w/2-1.5,y);c.shadowBlur=14;c.shadowColor=P.a;c.fillStyle="#f3e6c8"+hx(al);c.fillText(cc,w/2,y);c.shadowBlur=0;});
  c.restore();return true;}
 function wrap(s,n){const wds=s.split(" "),L=[];let cur="";for(const wd of wds){if((cur+wd).length>n){L.push(cur.trim());cur="";}cur+=wd+" ";}if(cur.trim())L.push(cur.trim());return L;}
 
 //// ===================== AUDIO v7: melancholic dreamcore dub ===============
 let AC,master,revIn,delIn,bedSub=null,padFilt=null,bedOn=true,started=false,noiseBuf=null;
 let audioVer=3,bedV1Gain=null,bedV2Gain=null,bedV3Gain=null,bedV4Gain=null,bedV5Gain=null,toneFilter=null;  // tones: 1 dreamcore · 2 Paul St.Hilaire · 3 Rhythm&Sound(default) · 4 deep abyss · 5 ether shimmer
-const DUBN=5,DUBNAMES=["","дождь","глубь","R&S","туман","свет"],bedMax=[0,.4,.42,.4,.46,.3];let bedGains=[];
+const DUBN=5,DUBNAMES=["","дождь","глубь","тень","туман","свет"],bedMax=[0,.4,.42,.4,.46,.3];let bedGains=[];
 let padDry=null,padRev=null,padDel=null,padGate=null;
 // 5 melancholic Japanese-ambient dub-techno presets — DUB switches the whole character of the chord voice
 // each DUB is a DRAMATICALLY different melancholic patch: register (octave), filter openness, and rhythm (pulse) — not just a subtle timbre shift
+// 5 sad, depressive AMBIENT textures (no dub-techno rhythm) — all slow drones in deep reverb space
 const DUBS=[null,
- {wave:"sine",    det:5, reg:0,  cut:1600,q:.6, rev:1.7,del:.5, dl:.5,  sub:.08,gain:.34,pulse:0}, // 1 дождь — soft airy high ambient (Yoshimura)
- {wave:"triangle",det:7, reg:-12,cut:360, q:1.6,rev:1.0,del:.6, dl:.66, sub:.18,gain:.34,pulse:0}, // 2 глубь — deep dark LOW drone
- {wave:"sawtooth",det:13,reg:0,  cut:1150,q:1.2,rev:.85,del:.72,dl:.375,sub:.10,gain:.34,pulse:1}, // 3 R&S — OFFBEAT detuned-saw STAB + dotted delay
- {wave:"triangle",det:10,reg:0,  cut:620, q:1.2,rev:1.9,del:.55,dl:.5,  sub:.12,gain:.33,pulse:0}, // 4 туман — foggy, washed, wide
- {wave:"sine",    det:4, reg:12, cut:3200,q:.5, rev:1.6,del:.5, dl:.42, sub:.05,gain:.28,pulse:0}, // 5 свет — HIGH glassy shimmer
+ {wave:"sine",    det:5, reg:0,  cut:1500,q:.5, rev:2.1,del:.5, dl:.55,sub:.09,gain:.32,pulse:0}, // 1 дождь — soft airy high
+ {wave:"triangle",det:7, reg:-12,cut:380, q:1.3,rev:1.6,del:.6, dl:.7, sub:.18,gain:.34,pulse:0}, // 2 глубь — deep low dark
+ {wave:"sawtooth",det:11,reg:-12,cut:600, q:1.0,rev:1.9,del:.6, dl:.6, sub:.13,gain:.29,pulse:0}, // 3 тень — grief drone (low saw, washed)
+ {wave:"triangle",det:10,reg:0,  cut:650, q:1.1,rev:2.3,del:.55,dl:.6, sub:.12,gain:.31,pulse:0}, // 4 туман — foggy, very wide
+ {wave:"sine",    det:4, reg:12, cut:2800,q:.5, rev:2.0,del:.5, dl:.5, sub:.05,gain:.26,pulse:0}, // 5 свет — high glassy, distant
 ];
 let padReg=0,padPulse=0;
 function applyDub(n){if(!AC)return;const P=DUBS[n]||DUBS[3],t=AC.currentTime;
@@ -371,7 +410,7 @@ function evolve(){if(!AC)return;
  if(dlNode)dlNode.delayTime.setTargetAtTime(DELAYS[(Math.random()*DELAYS.length)|0],AC.currentTime,1.5); // new delay feel
  if(toneFilter)toneFilter.frequency.setTargetAtTime(2000+Math.random()*9000,AC.currentTime,2.5);         // tone drift
  setTimeout(evolve,70000+Math.random()*60000);}              // every ~70-130s the music re-shapes itself
-function setDub(v,fade){audioVer=((v-1)%DUBN+DUBN)%DUBN+1;if(AC){const n=AC.currentTime,f=fade==null?2:fade;if(bedGains.length)bedGains.forEach((g,i)=>g&&g.gain.linearRampToValueAtTime(i+1===audioVer?bedMax[i+1]:0,n+f));applyDub(audioVer);}const el=document.getElementById("audver");if(el)el.textContent="DUB·"+audioVer;}
+function setDub(v,fade){audioVer=((v-1)%DUBN+DUBN)%DUBN+1;if(AC){const n=AC.currentTime,f=fade==null?2:fade;if(bedGains.length)bedGains.forEach((g,i)=>g&&g.gain.linearRampToValueAtTime(i+1===audioVer?bedMax[i+1]:0,n+f));applyDub(audioVer);}const el=document.getElementById("audver");if(el)el.textContent="◍ "+DUBNAMES[audioVer];}
 const GK=window.GKEY||{root:-7,scale:"aeolian"};const GROOT=GK.root,GSCALE=GK.scale;
 let curRoot=GROOT,curChord=[0,3,7,10],curScale=GSCALE,curBright=.3,curReg=0;
 const SCALES={aeolian:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],locrian:[0,1,3,5,6,8,10],minor:[0,2,3,5,7,8,10]};
@@ -491,9 +530,9 @@ function dubChord(chord,o){if(!AC)return;if(audioVer===2||audioVer===4)return bl
  chord.forEach(st=>padVoice(freq(curRoot,st+12+reg),t,dur,vel*.5/chord.length,lp));}
 // very sparse ambient chord movement (most sound is triggered by sonify/visual)
 function ambientBloom(){if(!AC)return;const now=performance.now();
- if(now-lastMotifTouch>20000&&now-lastChordT>9000){curChord=CONSONANT[motifSeq[motifPos%motifSeq.length]];motifPos++;retuneChord(true);lastChordT=now;} // chord moves SLOWLY (melancholic), held ~9s; МОТИВ hand-drive pauses it 20s
- if(bedOn&&Math.random()<(.12+soundDens*.5)*(1+cardWarm*.45))dubChord(curChord,{vel:(.15+soundDens*.12)*(1+cardWarm*.2),dur:6+Math.random()*4}); // warm = fuller movement · void = sparse dead air
- setTimeout(ambientBloom,(3500+Math.random()*3500)*(1.7-soundDens*1.2)*(cardWarm<0?1.4:1));}
+ if(now-lastMotifTouch>20000&&now-lastChordT>13000){curChord=CONSONANT[motifSeq[motifPos%motifSeq.length]];motifPos++;retuneChord(true);lastChordT=now;} // chord drifts very slowly (~13s) — sad ambient, not a progression
+ if(bedOn&&Math.random()<(.09+soundDens*.45)*(1+cardWarm*.4))dubChord(curChord,{vel:(.12+soundDens*.1)*(1+cardWarm*.2),dur:7+Math.random()*5}); // sparse, long swells · void = dead air
+ setTimeout(ambientBloom,(4500+Math.random()*4500)*(1.7-soundDens*1.2)*(cardWarm<0?1.5:1));}
 // MOOD, not key: crossfade pad brightness + set current chord colour. tonality never changes.
 const CONSONANT=[[0,3,7],[0,3,7,10],[3,7,10],[5,8,12],[7,10,14],[8,12,15],[0,3,7,14],[3,7,10,14]]; // consonant in-key chords (i, i7, III, iv, v, VI, i add9, III7) — all minor-key, no tritone/b9; МОТИВ moves the harmony
 function setMotif(v){curChord=CONSONANT[Math.max(0,Math.min(CONSONANT.length-1,Math.floor(v*CONSONANT.length)))];retuneChord(true);}
@@ -501,7 +540,7 @@ function setMood(snd){if(!snd)return;curBright=snd.bright==null?curBright:snd.br
 // SOUND BECOMES THE FEELING of the card: warm memories = lush/open/full · void & cold = dry/dark/empty
 const WARM_MOODS={ember:1,bloodorange:1,rust:.8,sepia:.9,crimson:.7,moss:.4,teal:.3,plum:.3},COLD_MOODS={void:1,ash:1,slate:.9,ice:1,steel:.9,smoke:.8,indigo:.7,bruise:.5};
 let cardWarm=0,dubBaseCut=900;
-function setCardMood(d){if(!AC)return;const t=AC.currentTime;let w=d.viz?1:(WARM_MOODS[d.emotion.mood]||(COLD_MOODS[d.emotion.mood]?-COLD_MOODS[d.emotion.mood]:0));cardWarm=w;
+function setCardMood(d){if(!AC)return;const t=AC.currentTime;const isMem=d.viz&&d.viz.indexOf("memo_")===0;let w=isMem?1:(WARM_MOODS[d.emotion.mood]||(COLD_MOODS[d.emotion.mood]?-COLD_MOODS[d.emotion.mood]:0));cardWarm=w;
  if(padRev)padRev.gain.setTargetAtTime(1.3+w*.9,t,1.6);                 // warm = lush reverb bloom ↔ cold = dry, empty
  if(chordLP)chordLP.frequency.setTargetAtTime(dubBaseCut*(1+w*.55),t,1.6); // warm = open/bright ↔ void = muffled/dark
  if(padDel)padDel.gain.setTargetAtTime((padDel.gain.value||.5)*(w<0?.6:1.15),t,1.4);} // void = less echo (dead air)
@@ -654,7 +693,7 @@ cards.forEach(c=>io.observe(c.el));
 addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{cards.forEach(c=>{if(c.state)c.rebuild();});if(ovd)ovFit();},220);});
 document.getElementById("regenAll").onclick=()=>cards.forEach(c=>{c.seed=(c.seed*1103515245+12345)>>>0;if(!c.d.viz){c.fixedEng=null;c.fixedSym=null;}if(c.state)c.rebuild();});
 document.getElementById("sound").onclick=e=>{audioStart();audioResume();bedOn=!bedOn;if(AC)master.gain.linearRampToValueAtTime(bedOn?.9:0,AC.currentTime+.5);e.target.textContent=bedOn?"♪ ЗВУК":"♪ ТИХО";e.target.classList.toggle("on",bedOn);};
-document.getElementById("audver").onclick=e=>{audioStart();audioResume();setDub(audioVer%DUBN+1,1.3);toast("DUB·"+audioVer+" — "+DUBNAMES[audioVer]);};
+document.getElementById("audver").onclick=e=>{audioStart();audioResume();setDub(audioVer%DUBN+1,1.6);toast("эмбиент: "+DUBNAMES[audioVer]);};
 document.getElementById("cont").onclick=()=>{if(lastTankIdx!=null&&cards[lastTankIdx])openFocus(cards[lastTankIdx].d,true);};
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("on");clearTimeout(window._tt);window._tt=setTimeout(()=>el.classList.remove("on"),3400);}
 // psychedelic intro -> vortex -> emerge into the first tank
@@ -751,7 +790,7 @@ function loop(t){requestAnimationFrame(loop);frame++;
    const idle=(t-ovLastAct)/1000;ovDeepen*=.95;const zT=Math.min(.085,.010+Math.max(0,idle-2)*.0045+ovDeepen*.55+br*.004);ovZoom+=(zT-ovZoom)*.05;const rot=Math.sin(t*6e-5)*.012+ovZoom*.28;
    if(ovS&&ovS.excite)ovS.excite*=.94;
    ovBx.clearRect(0,0,w,h);R[ovEng].frame(ovBx,w,h,tm,ovS,ovP);
-   if(reduceMotion){ctx.clearRect(0,0,w,h);composite(ctx,ovBf,w,h,ovSym,tm);}
+   if(reduceMotion||(ovd&&ovd.viz)){ctx.clearRect(0,0,w,h);composite(ctx,ovBf,w,h,ovSym,tm);} // figurative/memory cards: NO feedback tunnel, so the drawn symbol reads clearly
    else{if(ovFeed){ctx.save();ctx.globalAlpha=Math.max(.42,.62+br*.08-ovZoom*1.1);ctx.translate(w/2,h*.52);ctx.rotate(rot);const sc=1+ovZoom;ctx.scale(sc,sc);ctx.drawImage(ovFeed,-w/2,-h*.52,w,h);ctx.restore();}else ctx.clearRect(0,0,w,h);
     ctx.save();ctx.globalAlpha=.9;composite(ctx,ovBf,w,h,ovSym,tm);ctx.restore();}
    const tt=ovTone-.5;if(Math.abs(tt)>.02){ctx.globalAlpha=Math.abs(tt)*.20;ctx.fillStyle=tt>0?ovP.b:"#000307";ctx.fillRect(0,0,w,h);ctx.globalAlpha=1;}
