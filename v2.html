@@ -122,7 +122,7 @@
   <div id="candle"></div>
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
-    <span class="stat" style="color:#ff7a2e">v3.0</span>
+    <span class="stat" style="color:#ff7a2e">v3.1</span>
     <span class="spacer"></span>
     <span class="chip" id="cont" title="вернуться в последний бак">⟲ ПРОДОЛЖИТЬ</span>
     <span class="chip on" id="audver" title="эмбиент-слой">◍ тень</span>
@@ -456,6 +456,9 @@ function audioStart(){if(started)return;started=true;AC=new(window.AudioContext|
  bedGains=[bedV1Gain,bedV2Gain,bedV3Gain,bedV4Gain,bedV5Gain];
  // warm vinyl dust (soft Jelinek bed)
  {const src=AC.createBufferSource();src.buffer=nbuf();src.loop=true;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=1200;const g=AC.createGain();g.gain.value=.008;src.connect(lp);lp.connect(g);g.connect(master);src.start();}
+ // WHISPER bed — breathy filtered noise that RISES with gallery dwell pressure (the swarm of thoughts you hold at once)
+ {const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;const bp=AC.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1800;bp.Q.value=1.2;whisperGain=AC.createGain();whisperGain.gain.value=0;s.connect(bp);bp.connect(whisperGain);whisperGain.connect(master);if(revIn)whisperGain.connect(revIn);const lfo=AC.createOscillator();lfo.frequency.value=.7;const la=AC.createGain();la.gain.value=900;lfo.connect(la);la.connect(bp.frequency);lfo.start();s.start();}
+ heartTick();
  // ===== ambient TEXTURES (ТОН blends these): wind / rain / fire — continuous infinite generator =====
  {const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=700;lp.Q.value=2;windGain=AC.createGain();windGain.gain.value=0;s.connect(lp);lp.connect(windGain);windGain.connect(master);if(revIn)windGain.connect(revIn);const sw=AC.createOscillator();sw.frequency.value=.06;const sg2=AC.createGain();sg2.gain.value=420;sw.connect(sg2);sg2.connect(lp.frequency);sw.start();s.start();} // wind
  {const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;const hp=AC.createBiquadFilter();hp.type="highpass";hp.frequency.value=3200;hp.Q.value=.5;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=9000;rainGain=AC.createGain();rainGain.gain.value=0;s.connect(hp);hp.connect(lp);lp.connect(rainGain);rainGain.connect(master);if(revIn)rainGain.connect(revIn);} // rain hiss (gain = ТОН)
@@ -529,7 +532,7 @@ function dubChord(chord,o){if(!AC)return;if(audioVer===2||audioVer===4)return bl
  if(delIn){const ds=AC.createGain();ds.gain.value=.5;lp.connect(ds);ds.connect(delIn);}
  chord.forEach(st=>padVoice(freq(curRoot,st+12+reg),t,dur,vel*.5/chord.length,lp));}
 // very sparse ambient chord movement (most sound is triggered by sonify/visual)
-function ambientBloom(){if(!AC)return;const now=performance.now();
+function ambientBloom(){if(!AC)return;const now=performance.now();if(now<reliefT+650){setTimeout(ambientBloom,320);return;} // a beat of silence right after opening a card = relief
  if(now-lastMotifTouch>20000&&now-lastChordT>13000){curChord=CONSONANT[motifSeq[motifPos%motifSeq.length]];motifPos++;retuneChord(true);lastChordT=now;} // chord drifts very slowly (~13s) — sad ambient, not a progression
  if(bedOn&&Math.random()<(.09+soundDens*.45)*(1+cardWarm*.4))dubChord(curChord,{vel:(.12+soundDens*.1)*(1+cardWarm*.2),dur:7+Math.random()*5}); // sparse, long swells · void = dead air
  setTimeout(ambientBloom,(4500+Math.random()*4500)*(1.7-soundDens*1.2)*(cardWarm<0?1.5:1));}
@@ -602,7 +605,7 @@ let ovFeed=null,ovFx=null,ovCvEl=null,ovZoom=.012,ovDeepen=0,ovLastAct=0,lastTan
 const BREATHW=TAU*0.1/1000; // ~6 breaths/min
 function breathe(t){return .5+.5*Math.sin(t*BREATHW);}
 function showChrome(){const ov=document.getElementById("ov");ov.classList.remove("dim");clearTimeout(chromeTimer);chromeTimer=setTimeout(()=>{if(ovd)ov.classList.add("dim");},3800);}
-function openFocus(d){const card=cards.find(c=>c.d===d);ovd=d;ovSeed=card?card.seed:Math.abs(hash(d.id))%99999;ovV=makeVoice(d.sound);ovP=pal(d.emotion.mood);ovEng=(card&&(card.eng||card.fixedEng))||d.viz||pickEngine(d,ovSeed);ovSym=(card&&card.fixedSym!=null?card.fixedSym:(ovSeed>>4)%5);ovReveal=null;ovZoom=.012;ovDeepen=0;ovLastAct=performance.now();galleryActive=false;document.getElementById("ov-id").textContent=d.id+" · "+d.emotion.title;const ov=document.getElementById("ov");ov.classList.add("on","tank");tankMode=true;setMood(d.sound);setCardMood(d);ovFit();showChrome();
+function openFocus(d){const card=cards.find(c=>c.d===d);ovd=d;ovSeed=card?card.seed:Math.abs(hash(d.id))%99999;ovV=makeVoice(d.sound);ovP=pal(d.emotion.mood);ovEng=(card&&(card.eng||card.fixedEng))||d.viz||pickEngine(d,ovSeed);ovSym=(card&&card.fixedSym!=null?card.fixedSym:(ovSeed>>4)%5);ovReveal=null;ovZoom=.012;ovDeepen=0;ovLastAct=performance.now();galleryActive=false;reliefT=performance.now();thoughts.length=0;if(whisperGain&&AC)whisperGain.gain.setTargetAtTime(0,AC.currentTime,.1);document.getElementById("ov-id").textContent=d.id+" · "+d.emotion.title;const ov=document.getElementById("ov");ov.classList.add("on","tank");tankMode=true;setMood(d.sound);setCardMood(d);ovFit();showChrome();
  ovIdx=cards.indexOf(card);lastTankIdx=ovIdx;document.getElementById("cont").classList.add("show");
  ovReveal={txt:makeConfession(d),t0:performance.now()+450}; // FIRST confession surfaces right away, on every card
  clearInterval(ovAuto);ovAuto=setInterval(()=>{if(ovd&&!ovReveal)ovReveal={txt:makeConfession(ovd),t0:performance.now()};},8000); // and more often
@@ -729,6 +732,7 @@ addEventListener("pointerdown",e=>{if(reduceMotion)return;const em=document.crea
 //// GALLERY PRESSURE — the longer you hold the whole sum in the gallery, the more it warps;
 //// opening a card = relief (holding one thing, not all). a living mnemonic card-index.
 let pressure=0,galleryActive=false,galleryT=0,hcv=null,hctx=null,spores=[],burns=[],flashT=0,bh={x:-.2,y:.4,vx:0,active:false,_lt:0};
+let whisperGain=null,heartT=0,reliefT=0,thoughts=[]; // overwhelm mechanic: rising whisper + thought-swarm; relief on card open
 const PRAMP=24000; // ms of dwell to full pressure
 function halluFit(){hcv=document.getElementById("hallu");const dpr=Math.min(2,devicePixelRatio||1);hcv.width=innerWidth*dpr;hcv.height=innerHeight*dpr;hctx=hcv.getContext("2d");hctx.setTransform(dpr,0,0,dpr,0,0);}
 function enterGallery(){galleryActive=true;galleryT=performance.now();}
@@ -746,6 +750,14 @@ function card0Beckon(p,t){let active=null;
  el.style.boxShadow=`0 0 ${gl}px rgba(255,120,50,${.18+p*.72*(.3+.7*hb)})`;
  el.style.borderColor=`rgba(255,150,60,${.4+p*.5})`;
  el.style.transform=`scale(${1+p*.034*hb})`;el.style.zIndex="6";}
+// audio heartbeat — beats in the gallery, louder & FASTER the more pressure you hold
+function heartTick(){if(!AC){setTimeout(heartTick,500);return;}const p=pressure;
+ if(bedOn&&galleryActive&&!ovd&&p>.12){const t=AC.currentTime,thump=(dt,v)=>{const o=AC.createOscillator();o.type="sine";o.frequency.setValueAtTime(66,t+dt);o.frequency.exponentialRampToValueAtTime(38,t+dt+.12);const g=AC.createGain();g.gain.setValueAtTime(.0001,t+dt);g.gain.linearRampToValueAtTime(v*p,t+dt+.02);g.gain.exponentialRampToValueAtTime(.0001,t+dt+.3);o.connect(g);g.connect(master);o.start(t+dt);o.stop(t+dt+.36);};thump(0,.2);thump(.22,.14);}
+ setTimeout(heartTick,Math.max(360,1000-pressure*520));}
+// the swarm of your own thoughts, all at once (rises with pressure), on the gallery overlay
+function drawThoughts(t,p){if(!thoughts.length)return;hctx.save();hctx.textAlign="center";const W=innerWidth,H=innerHeight,fs=Math.max(10,Math.min(W*.032,18));hctx.font=`${fs}px var(--mono,monospace)`;
+ for(let i=thoughts.length-1;i>=0;i--){const th=thoughts[i],age=(t-th.t0)/th.life;if(age>=1){thoughts.splice(i,1);continue;}const env=Math.sin(age*Math.PI),x=th.x*W,y=th.y*H+(age-.5)*th.vy*H,al=env*(.12+p*.5);if(al<=.01)continue;hctx.globalAlpha=al*.5;hctx.fillStyle="#ff3b3b";hctx.fillText(th.txt,x+1,y);hctx.fillStyle="#33ffd0";hctx.fillText(th.txt,x-1,y);hctx.globalAlpha=al;hctx.fillStyle="#cbe6d8";hctx.fillText(th.txt,x,y);}
+ hctx.globalAlpha=1;hctx.restore();}
 function drawHallu(t,p){const w=innerWidth,h=innerHeight;hctx.clearRect(0,0,w,h);
  hctx.globalCompositeOperation="lighter";const cols=["#ffb24a","#ff7a2e","#c8a85a","#3fb0a6"];
  for(let i=0;i<4;i++){const a=t*1e-4+i*1.7,bx=w*(.5+Math.cos(a)*.34),by=h*(.5+Math.sin(a*1.3)*.34),rr=Math.min(w,h)*(.2+.09*Math.sin(t*5e-4+i)),gr=hctx.createRadialGradient(bx,by,0,bx,by,rr);gr.addColorStop(0,cols[i]+hx(p*.24));gr.addColorStop(1,cols[i]+"00");hctx.fillStyle=gr;hctx.fillRect(0,0,w,h);}
@@ -754,7 +766,7 @@ function drawHallu(t,p){const w=innerWidth,h=innerHeight;hctx.clearRect(0,0,w,h)
  hctx.globalAlpha=1;hctx.globalCompositeOperation="source-over";
  // FILM BURN — purple scorch core + orange burning rim, grow & fade (a frame of film burning through)
  if(Math.random()<p*.07&&burns.length<6)burns.push({x:Math.random(),y:Math.random(),t0:t,life:1400+Math.random()*1600,mx:.12+Math.random()*.18});
- for(let i=burns.length-1;i>=0;i--){const b=burns[i],age=(t-b.t0)/b.life;if(age>=1){burns.splice(i,1);continue;}const bx=b.x*w,by=b.y*h,rr=Math.min(w,h)*b.mx*(.4+age),env=Math.sin(age*Math.PI);
+ for(let i=burns.length-1;i>=0;i--){const b=burns[i],age=(t-b.t0)/b.life;if(age>=1||age<0){burns.splice(i,1);continue;}const bx=b.x*w,by=b.y*h,rr=Math.max(1,Math.min(w,h)*b.mx*(.4+age)),env=Math.sin(age*Math.PI);
    hctx.globalCompositeOperation="source-over";let g1=hctx.createRadialGradient(bx,by,0,bx,by,rr);g1.addColorStop(0,"rgba(60,12,52,"+(env*.34)+")");g1.addColorStop(.55,"rgba(30,6,30,"+(env*.18)+")");g1.addColorStop(1,"transparent");hctx.fillStyle=g1;hctx.fillRect(0,0,w,h);
    hctx.globalCompositeOperation="lighter";let g2=hctx.createRadialGradient(bx,by,rr*.5,bx,by,rr);g2.addColorStop(0,"transparent");g2.addColorStop(.72,"rgba(255,108,28,"+(env*.5)+")");g2.addColorStop(.86,"rgba(255,178,60,"+(env*.42)+")");g2.addColorStop(1,"transparent");hctx.fillStyle=g2;hctx.fillRect(0,0,w,h);}
  hctx.globalCompositeOperation="source-over";
@@ -774,13 +786,16 @@ function drawBlackHole(t,cx,cy,R,p){
  hctx.fillStyle="#000";hctx.beginPath();hctx.arc(cx,cy,R,0,TAU);hctx.fill();
  if(Math.abs(cx-innerWidth/2)<5&&AC)dubThrow();}
 function updateHallu(t){const g=document.getElementById("grid");const target=(galleryActive&&!ovd)?Math.min(1,(t-galleryT)/PRAMP):0;pressure+=(target-pressure)*(target>pressure?.04:.028);const p=pressure;// relief is SLOW so you watch it come back to normal when you open a card
- if(p<.005){if(hcv&&hcv.style.display!=="none")hcv.style.display="none";if(g.style.filter){g.style.filter="";g.style.transform="";}card0Beckon(0,t);return;}
+ if(p<.005){if(hcv&&hcv.style.display!=="none")hcv.style.display="none";if(g.style.filter){g.style.filter="";g.style.transform="";}if(whisperGain&&AC)whisperGain.gain.setTargetAtTime(0,AC.currentTime,.4);card0Beckon(0,t);return;}
  if(reduceMotion){card0Beckon(p,t);return;}                                  // calm: only beckon, no warp
  g.style.transform=""; // NO transform on the tall scroll-grid (it would displace the visible cards far off-screen); warp is done purely by the in-place SVG displacement below
  // REAL whole-image warp via SVG displacement (pixels reassemble), scale grows with dwell
  if(t-(window._hw||0)>50){window._hw=t;const disp=document.getElementById("tw-disp"),turb=document.getElementById("tw-turb");if(disp)disp.setAttribute("scale",(p*p*22*(.62+.38*Math.sin(t*1.3e-3))).toFixed(1));if(turb)turb.setAttribute("baseFrequency",(0.007+Math.sin(t*8e-5)*0.004+p*0.006).toFixed(4));}
  if(t-(window._hf||0)>100){window._hf=t;g.style.filter=`url(#tripwarp) saturate(${1+p*.8}) contrast(${1+p*.25}) hue-rotate(${Math.sin(t*3e-4)*p*40}deg) brightness(${1+p*.05})`;}
- if(!hctx)halluFit();if(hcv.style.display==="none")hcv.style.display="block";drawHallu(t,p);card0Beckon(p,t);}
+ if(!hctx)halluFit();if(hcv.style.display==="none")hcv.style.display="block";
+ if(whisperGain&&AC)whisperGain.gain.setTargetAtTime(p*p*.085,AC.currentTime,.4);                 // whisper-noise rises with pressure
+ if(galleryActive&&!ovd&&p>.14&&Math.random()<p*.16&&thoughts.length<16){const c=cards[(Math.random()*cards.length)|0],L=(c&&(c.d.lines||c.d.conf))||[];if(L.length)thoughts.push({txt:L[(Math.random()*L.length)|0].slice(0,52),x:.1+Math.random()*.8,y:.15+Math.random()*.7,t0:t,life:2600+Math.random()*2600,vy:(Math.random()-.5)*.12});} // your thoughts, all at once
+ drawHallu(t,p);drawThoughts(t,p);card0Beckon(p,t);}
 //// master loop
 let frame=0;
 function loop(t){requestAnimationFrame(loop);frame++;
