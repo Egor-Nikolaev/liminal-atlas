@@ -122,7 +122,7 @@
   <div id="candle"></div>
   <div class="bar"><b>◈ LIMINAL</b>
     <span class="stat">СТАНЦИЙ <em id="s-cards">0</em></span>
-    <span class="stat" style="color:#ff7a2e">v3.2</span>
+    <span class="stat" style="color:#ff7a2e">v3.3</span>
     <span class="spacer"></span>
     <span class="chip" id="cont" title="вернуться в последний бак">⟲ ПРОДОЛЖИТЬ</span>
     <span class="chip on" id="audver" title="эмбиент-слой">◍ тень</span>
@@ -142,7 +142,7 @@
       <label>ТАБЛА<input type="range" id="sl-tabla" min="0" max="100" value="0"></label>
       <label>КАЛИМБА<input type="range" id="sl-kalimba" min="0" max="100" value="0"></label>
       <label>ДЕРЕВО<input type="range" id="sl-wood" min="0" max="100" value="0"></label></div>
-    <div class="ohint">тяни/веди — мутирует движок под пальцем · держи — раскроется · крутилки меняют визуал и звук</div></div>
+    <div class="ohint">тап — нота встаёт на орбиту · тап по ноте — убрать · луч играет их по кругу · держи — раскроется</div></div>
 
   <canvas id="glitch"></canvas>
   <canvas id="intro"></canvas>
@@ -815,7 +815,12 @@ document.getElementById("ov-png").onclick=()=>exportPNG(document.getElementById(
  st.addEventListener("touchstart",e=>{e.preventDefault();},{passive:false}); // kill iOS long-press selection/copy callout on the stage
  st.addEventListener("pointerdown",e=>{if(!ovd)return;e.preventDefault();const[x,y]=rel(e),now=performance.now();ovLastAct=now;showChrome();ovDeepen+=.035;          // tap pushes deeper into the tunnel
    voiceOn(ovV,x,y);                                                   // sustained tone, bends while held
-   dubChord(curChord,{vel:.55,bright:(ovd.sound.bright||.4)+.25,reg:ovd.sound.reg,dur:audioVer===1?3.5:6}); // dub hit (consonant chord from МОТИВ)
+   {const L=orbFor(ovd.id),Sm=Math.min(ovM.w,ovM.h),dx=(x-.5)*ovM.w,dy=(y-.52)*ovM.h,ang=Math.atan2(dy,dx);let hit=-1; // tap = place/remove a NOTE on the orbit
+    for(let i=0;i<L.length;i++){const o=L[i],oa=o.a0+o.sp*now,ox=Math.cos(oa)*ORB_RINGS[o.ring]*Sm,oy=Math.sin(oa)*ORB_RINGS[o.ring]*Sm;if(Math.hypot(ox-dx,oy-dy)<Sm*.055){hit=i;break;}}
+    if(hit>=0){L.splice(hit,1);}
+    else{const rp=Math.hypot(dx,dy)/Sm;let ring=0,bd=9;ORB_RINGS.forEach((r,i)=>{const d=Math.abs(rp-r);if(d<bd){bd=d;ring=i;}});
+     if(L.length>=10)L.shift();const sp=TAU/(1000*ORB_SPD[(Math.random()*4)|0]);
+     L.push({ring,a0:ang-sp*now,sp,pa:((ang-ORB_PH)%TAU+TAU)%TAU,sz:2});bellNote(ring,.22);orbRipples.push({x:ovM.w/2+dx,y:ovM.h*.52+dy,t0:now});}}
    if(ovS){mutateState(ovS,x,y,ovM.w,ovM.h);ovS.pulse=1;ovS.excite=1;} // mutate THIS engine locally under the finger — never switches engine
    ovPunch.push({x,y,t0:now});if(ovPunch.length>7)ovPunch.shift(); // real lens distortion at the touch point
    try{st.setPointerCapture(e.pointerId);}catch(_){}ovHold=setTimeout(()=>{ovReveal={txt:makeConfession(ovd),t0:performance.now()};},650);});
@@ -847,6 +852,33 @@ function mutateState(s,x,y,w,h){if(!s)return;const Rn=.23,Rp=Math.min(w,h)*.23;
  if(s.em){let bi=0,bd=9;for(let i=0;i<s.em.length;i++){const dx=x-s.em[i].x,dy=y-s.em[i].y,d=dx*dx+dy*dy;if(d<bd){bd=d;bi=i;}}s.em[bi].x=x;s.em[bi].y=y;s.em[bi].ph=0;return;} // rings
 }
 // reactive disturbance drawn where the finger is held
+//// ORBIT SEQUENCER — every card is a live instrument: satellites orbit the rings and ring a note (in the global key)
+//// each time they cross the playhead beam. Tap = place a note on the nearest ring; tap a satellite = remove it.
+//// Every card seeds its OWN starting constellation → its own endless melody, editable by touch.
+const ORB_RINGS=[.17,.26,.35,.44],ORB_PH=-Math.PI/2,ORB_SPD=[7,9,11,14],orbMap={};let orbRipples=[],orbCross=-9999;
+function orbFor(id){if(orbMap[id])return orbMap[id];const r=rng(hash(id)^0x0517),n=2+(r()*3|0),L=[];for(let i=0;i<n;i++){const ring=(r()*4|0);L.push({ring,a0:r()*TAU,sp:TAU/(1000*ORB_SPD[(r()*4|0)]),pa:0,sz:1});}return orbMap[id]=L;}
+function orbDeg(ring){const ch=curChord;return ch[ring%ch.length]+12*Math.floor(ring/ch.length);}
+function bellNote(ring,vel){if(!AC||!bedOn)return;const t=AC.currentTime,f=freq(curRoot,orbDeg(ring)+12);vel=vel||.16;
+ const o=AC.createOscillator();o.type="triangle";o.frequency.value=f;const o2=AC.createOscillator();o2.type="sine";o2.frequency.value=f*2.01;
+ const g2=AC.createGain();g2.gain.value=.22;const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=f*(3+ovTone*4);const g=AC.createGain();g.gain.value=0;
+ o.connect(g);o2.connect(g2);g2.connect(g);g.connect(lp);
+ const dry=AC.createGain();dry.gain.value=.2;lp.connect(dry);dry.connect(master);
+ if(revIn){const rs=AC.createGain();rs.gain.value=.9;lp.connect(rs);rs.connect(revIn);}
+ if(delIn){const ds=AC.createGain();ds.gain.value=.4;lp.connect(ds);ds.connect(delIn);}
+ g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vel,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+1.8);
+ o.start(t);o2.start(t);o.stop(t+1.9);o2.stop(t+1.9);}
+function drawOrbits(ctx,w,h,t,id,P,live){const L=orbFor(id),cx=w/2,cy=h*.52,S=Math.min(w,h);ctx.save();
+ ctx.setLineDash([2,7]);ctx.lineWidth=.7;ctx.strokeStyle=P.a+(live?"3a":"1e");
+ for(const rr of ORB_RINGS){ctx.beginPath();ctx.arc(cx,cy,rr*S,0,TAU);ctx.stroke();}ctx.setLineDash([]);
+ if(live){const glow=Math.max(0,1-(t-orbCross)/400);ctx.strokeStyle=P.b+hx(.25+glow*.55);ctx.lineWidth=1.4+glow*1.6;ctx.shadowBlur=8+glow*14;ctx.shadowColor=P.b;
+  ctx.beginPath();ctx.moveTo(cx+Math.cos(ORB_PH)*S*.12,cy+Math.sin(ORB_PH)*S*.12);ctx.lineTo(cx+Math.cos(ORB_PH)*S*.5,cy+Math.sin(ORB_PH)*S*.5);ctx.stroke();ctx.shadowBlur=0;}
+ for(const o of L){const ang=o.a0+o.sp*t,r=ORB_RINGS[o.ring]*S,x=cx+Math.cos(ang)*r,y=cy+Math.sin(ang)*r;
+  if(live){const a=((ang-ORB_PH)%TAU+TAU)%TAU;if(a<o.pa){bellNote(o.ring);orbCross=t;o.sz=2.3;orbRipples.push({x,y,t0:t});if(ovS)ovS.excite=Math.min(1,(ovS.excite||0)+.25);}o.pa=a;}
+  o.sz+=(1-o.sz)*.06;
+  for(let k=1;k<=4;k++){const ta=ang-k*.09,tx=cx+Math.cos(ta)*r,ty=cy+Math.sin(ta)*r;ctx.globalAlpha=(live?.5:.3)*(1-k/5);ctx.fillStyle=P.b;ctx.beginPath();ctx.arc(tx,ty,Math.max(.4,2.2-k*.35),0,TAU);ctx.fill();}
+  ctx.globalAlpha=1;ctx.shadowBlur=live?10:5;ctx.shadowColor=P.b;ctx.fillStyle=P.b;ctx.beginPath();ctx.arc(x,y,(live?3.2:2.1)*o.sz,0,TAU);ctx.fill();ctx.shadowBlur=0;}
+ if(live){for(let i=orbRipples.length-1;i>=0;i--){const rp=orbRipples[i],age=(t-rp.t0)/650;if(age>=1||age<0){orbRipples.splice(i,1);continue;}ctx.globalAlpha=(1-age)*.7;ctx.strokeStyle=P.b;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(rp.x,rp.y,4+age*S*.09,0,TAU);ctx.stroke();}ctx.globalAlpha=1;}
+ ctx.restore();}
 function pokeLayer(c,w,h,t,poke,P){const px=poke.x*w,py=poke.y*h,pr=Math.min(w,h)*.18;
  const g=c.createRadialGradient(px,py,0,px,py,pr);g.addColorStop(0,P.b+"66");g.addColorStop(.5,P.a+"33");g.addColorStop(1,P.a+"00");c.fillStyle=g;c.beginPath();c.arc(px,py,pr,0,TAU);c.fill();
  c.strokeStyle=P.a+"88";c.lineWidth=1;for(let k=0;k<3;k++){const rr=((t*.12+k*pr*.5)%pr);c.globalAlpha=1-rr/pr;c.beginPath();c.arc(px,py,rr,0,TAU);c.stroke();}c.globalAlpha=1;
@@ -979,7 +1011,7 @@ function updateHallu(t){const g=document.getElementById("grid");const target=(ga
 //// master loop
 let frame=0;
 function loop(t){requestAnimationFrame(loop);frame++;
- for(const c of cards){if(!c.vis||!c.state||!c.m||!c.bx)continue;if(c.heavy&&(frame&1))continue;const{c:ctx,w,h}=c.m;c.bx.clearRect(0,0,w,h);R[c.eng].frame(c.bx,w,h,t,c.state,c.P);ctx.clearRect(0,0,w,h);composite(ctx,c.bf,w,h,c.sym,t);fragLayer(ctx,w,h,t,c.fr,c.P);if(c.reveal){if(!revealLayer(ctx,w,h,t,c.reveal,c.P))c.reveal=null;}}
+ for(const c of cards){if(!c.vis||!c.state||!c.m||!c.bx)continue;if(c.heavy&&(frame&1))continue;const{c:ctx,w,h}=c.m;c.bx.clearRect(0,0,w,h);R[c.eng].frame(c.bx,w,h,t,c.state,c.P);ctx.clearRect(0,0,w,h);composite(ctx,c.bf,w,h,c.sym,t);drawOrbits(ctx,w,h,t,c.d.id,c.P,false);fragLayer(ctx,w,h,t,c.fr,c.P);if(c.reveal){if(!revealLayer(ctx,w,h,t,c.reveal,c.P))c.reveal=null;}}
  if(ovd&&ovM&&ovBx){const{c:ctx,w,h}=ovM,br=breathe(t),tm=t*ovSpd*(.7+br*.6);
    // idle + tap deepen the infinite zoom-into-self (video-feedback tunnel)
    const idle=(t-ovLastAct)/1000;ovDeepen*=.95;const zT=Math.min(.085,.010+Math.max(0,idle-2)*.0045+ovDeepen*.55+br*.004);ovZoom+=(zT-ovZoom)*.05;const rot=Math.sin(t*6e-5)*.012+ovZoom*.28;
@@ -991,6 +1023,7 @@ function loop(t){requestAnimationFrame(loop);frame++;
    const tt=ovTone-.5;if(Math.abs(tt)>.02){ctx.globalAlpha=Math.abs(tt)*.20;ctx.fillStyle=tt>0?ovP.b:"#000307";ctx.fillRect(0,0,w,h);ctx.globalAlpha=1;}
    ctx.globalAlpha=(.06+(1-br)*.06);ctx.fillStyle="#000204";ctx.fillRect(0,0,w,h);ctx.globalAlpha=1; // breathing dark pulse
    applyPunch(ctx,w,h,t); // REAL in-generator distortion: the generator's own pixels diverge radially from each tap/drag point
+   drawOrbits(ctx,w,h,t,ovd.id,ovP,true); // live orbit sequencer — notes ring as satellites cross the beam (echoes into the feedback tunnel)
    if(ovFx&&!reduceMotion){ovFx.clearRect(0,0,ovFeed.width,ovFeed.height);ovFx.drawImage(ovCvEl,0,0);} // capture for next-frame feedback (before text)
    fragLayer(ctx,w,h,t,ovFr,ovP);if(ovReveal&&!revealLayer(ctx,w,h,t,ovReveal,ovP))ovReveal=null;sonify({d:ovd,state:ovS,spd:ovSpd,tone:ovTone,dens:ovDens},t);}
  drawGlitch(t);updateHallu(t);
